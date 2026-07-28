@@ -1,4 +1,4 @@
-module github.com/1msg/chat-api-go
+module github.com/1msg/1msg-sdk-go
 
 go 1.23
 
