@@ -1,0 +1,4023 @@
+openapi: 3.0.3
+info:
+  contact:
+    email: support@1msg.io
+    name: 1MSG API Support
+    url: https://help.1msg.io
+  description: |
+    Public client API for sending messages, managing groups, flows, and templates.
+
+    This is the API exposed to end customers via platform.1msg.io
+
+    **Authentication:** All requests require `token` query parameter with JWT or API key.
+
+    **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start
+    **API Docs:** https://docs.1msg.io/
+  title: 1MSG WhatsApp Business API (Public)
+  version: 1.0.0
+servers:
+- description: Production
+  url: https://api.1msg.io
+- description: Staging
+  url: https://api-stage.1msg.io
+- description: Local development
+  url: http://127.0.0.1:3050
+security:
+- tokenAuth: []
+tags:
+- description: "Send messages, files, templates, and other content"
+  name: Messaging
+- description: "Block, unblock, and list blocked WhatsApp users"
+  name: Users
+- description: Channel profile information (read and update)
+  name: Profile
+- description: Channel status and automation settings
+  name: Channel
+- description: Catalog and cart commerce settings (`GET`/`POST /commerce`)
+  name: Catalog
+- description: Create and manage WhatsApp groups
+  name: Groups
+- description: WhatsApp Flows (interactive forms)
+  name: Flows
+- description: Get and manage message templates
+  name: Templates
+- description: Client webhook URL configuration
+  name: Webhooks
+- description: WhatsApp Calling API (beta / feature-gated)
+  name: Calling
+paths:
+  /me:
+    get:
+      description: Get WhatsApp Business Account profile information
+      operationId: getMe
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileInfo"
+          description: Profile information
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Get Profile Info
+      tags:
+      - Profile
+    post:
+      description: |
+        Update WhatsApp Business Account profile fields. At least one of
+        about, description, email, photo, address, vertical, websites is required.
+        Blocked when the channel subscription limit is exceeded.
+      operationId: updateMe
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/updateMe_request"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: Profile updated
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "422":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Wrong request (no updatable fields)
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Update profile info
+      tags:
+      - Profile
+  /sendMessage:
+    post:
+      description: "Send a message to an existing chat. (Only if the dialogue has\
+        \ an Open Session). \nThe message will be added to the queue for sending and\
+        \ delivered even if the phone \nis disconnected from the Internet or authorization\
+        \ is not passed.\n\nOnly one of two parameters is needed to determine the\
+        \ destination - chatId or phone.\n"
+      operationId: sendMessage
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/SendMessageRequest"
+          application/json:
+            example:
+              body: Hello World
+              phone: 12020721369
+            schema:
+              $ref: "#/components/schemas/SendMessageRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageSentResponse"
+          description: Message sent successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid request parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Rate limit exceeded
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Send a Message
+      tags:
+      - Messaging
+  /sendFile:
+    post:
+      description: "Send a file to an existing chat. (Only if the dialogue has an\
+        \ Open Session). \nOnly one of two parameters is needed to determine the destination\
+        \ - chatId or phone.\n"
+      operationId: sendFile
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/SendFileRequest"
+          application/json:
+            example:
+              phone: 12020721369
+              body: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
+              filename: dummy.pdf
+              caption: Here is the file
+            schema:
+              $ref: "#/components/schemas/SendFileRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageSentResponse"
+          description: Message sent successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid request parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Rate limit exceeded
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Send a File
+      tags:
+      - Messaging
+  /sendLocation:
+    post:
+      description: "Send a location to an existing chat. (Only if the dialogue has\
+        \ an Open Session). \nOnly one of two parameters is needed to determine the\
+        \ destination - chatId or phone.\n"
+      operationId: sendLocation
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/sendLocation_request"
+          application/json:
+            example:
+              lat: "45.018337"
+              lng: "-73.968285"
+              name: Facebook HQ
+              address: "9766 Valley View St., New York, NY 10024"
+              phone: 12020721369
+            schema:
+              $ref: "#/components/schemas/sendLocation_request_1"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageSentResponse"
+          description: Message sent successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid request parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Rate limit exceeded
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Send a Location
+      tags:
+      - Messaging
+  /sendContact:
+    post:
+      operationId: sendContact
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            example:
+              phone: "{{testPhone}}"
+              contacts:
+              - name:
+                  formatted_name: John Doe
+                  first_name: John
+                  last_name: Doe
+                  middle_name: ""
+                  suffix: ""
+                  prefix: ""
+                birthday: ""
+                addresses: []
+                emails: []
+                org:
+                  company: ""
+                  department: ""
+                  title: ""
+                phones:
+                - phone: "+1234567890"
+                  type: HOME
+                  wa_id: ""
+                urls: []
+            schema:
+              $ref: "#/components/schemas/sendContact_request"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageSentResponse"
+          description: Message sent successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid request parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Rate limit exceeded
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Send a Contact
+      tags:
+      - Messaging
+  /sendList:
+    post:
+      operationId: sendList
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            example:
+              phone: "{{testPhone}}"
+              body: This is a list message
+              buttonText: Click me
+              action: Action
+              sections:
+              - title: Section 1
+                rows:
+                - id: "1"
+                  title: Row 1
+                  description: Description for Row 1
+            schema:
+              $ref: "#/components/schemas/sendList_request"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageSentResponse"
+          description: Message sent successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid request parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Rate limit exceeded
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Send List Message
+      tags:
+      - Messaging
+  /sendButton:
+    post:
+      operationId: sendButton
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            example:
+              phone: "{{testPhone}}"
+              body: This is a buttons message
+              footer: Footer
+              sections:
+              - type: reply
+                reply:
+                  id: "1"
+                  title: Button 1
+            schema:
+              $ref: "#/components/schemas/sendButton_request"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageSentResponse"
+          description: Message sent successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid request parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Rate limit exceeded
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Send Reply Buttons Message
+      tags:
+      - Messaging
+  /sendLocationRequest:
+    post:
+      operationId: sendLocationRequest
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            example:
+              phone: "{{testPhone}}"
+              body: Text
+            schema:
+              $ref: "#/components/schemas/sendLocationRequest_request"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageSentResponse"
+          description: Message sent successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid request parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Rate limit exceeded
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Send Location Request Message
+      tags:
+      - Messaging
+  /sendFlow:
+    post:
+      description: "Send Interactive WhatsApp Flow message to an existing chat. (Only\
+        \ if the dialogue has an Open Session). \nOnly one of two parameters is needed\
+        \ to determine the destination - chatId or phone.\n\nUse this method to send\
+        \ a published WhatsApp Flow as a service (interactive) message. \nIf the 24-hour\
+        \ window is closed, send a template with a FLOW button via /sendTemplate.\n"
+      operationId: sendFlow
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/sendFlow_request"
+          application/json:
+            schema:
+              $ref: "#/components/schemas/sendFlow_request_1"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageSentResponse"
+          description: Message sent successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid request parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Rate limit exceeded
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Send WhatsApp Flow Message
+      tags:
+      - Messaging
+  /sendReaction:
+    post:
+      operationId: sendReaction
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            example:
+              phone: "{{testPhone}}"
+              body: 😀
+              quotedMsgId: "{{lastMessageId}}"
+            schema:
+              $ref: "#/components/schemas/sendReaction_request"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageSentResponse"
+          description: Message sent successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid request parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Rate limit exceeded
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Send Reaction
+      tags:
+      - Messaging
+  /sendCarousel:
+    post:
+      description: "You can send product cards via Carousel in two ways:\n\nTemplate\
+        \ messages: do not require a 24-hour customer service window between you and\
+        \ the recipient. Use sendTemplate.\n\nFree-form messages: can be sent only\
+        \ when a customer service window is open between you and the recipient. Use\
+        \ sendCarousel.\n\nThe message structure in /sendCarousel is largely similar\
+        \ to sending a template. However, in this case you must \nexplicitly specify\
+        \ all elements that are created in advance when working with templates. This\
+        \ is because the message \nis sent without using a template.\n\nIn /sendCarousel,\
+        \ for sending a Catalog Carousel there can be either 1 URL button or one or\
+        \ more quick reply buttons.\n"
+      operationId: sendCarousel
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/sendCarousel_request"
+          application/json:
+            schema:
+              $ref: "#/components/schemas/sendCarousel_request_1"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageSentResponse"
+          description: Message sent successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid request parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Rate limit exceeded
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Send Carousel
+      tags:
+      - Messaging
+  /sendProduct:
+    post:
+      operationId: sendProduct
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: true
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageSentResponse"
+          description: Message sent successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid request parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Rate limit exceeded
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Send a Product
+      tags:
+      - Messaging
+  /sendTemplate:
+    post:
+      description: |
+        Send a WhatsApp template message (works outside the 24-hour session window).
+
+        Supported `params` button `sub_type` values include: `url`, `quick_reply`,
+        `copy_code` / `coupon_code`, `catalog`, `flow`, `limited_time_offer`, and
+        **`order_details`** (WhatsApp Payments **India only** — requires an approved
+        Utility template with an ORDER_DETAILS button).
+
+        For India order/invoice payments outside 24h, include a button component:
+
+        ```json
+        {
+          "type": "button",
+          "sub_type": "order_details",
+          "index": 0,
+          "parameters": [{
+            "type": "action",
+            "action": { "order_details": { "reference_id": "...", "currency": "INR", "order": {} } }
+          }]
+        }
+        ```
+
+        Convenience wrapper with structured fields: `POST /sendOrderDetails`.
+      operationId: sendTemplate
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            example:
+              template: test_buttons_2
+              language:
+                policy: deterministic
+                code: ru
+              namespace: 41123797_e45e_4f06_a2fa_443b27c6f5ec
+              params: []
+              phone: "{{testPhone}}"
+            schema:
+              $ref: "#/components/schemas/sendTemplate_request"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: Send Template Message
+      tags:
+      - Templates
+  /messages:
+    get:
+      operationId: listMessages
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                ok:
+                  value:
+                    messages: []
+                historyDisabled:
+                  value:
+                    notice: saving history disabled
+              schema:
+                $ref: "#/components/schemas/listMessages_200_response"
+          description: OK
+      summary: Get messages list
+      tags:
+      - Messaging
+  /readMessage:
+    post:
+      operationId: createReadMessage
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/createReadMessage_request"
+          application/json:
+            schema:
+              $ref: "#/components/schemas/createReadMessage_request"
+      responses:
+        "200":
+          content:
+            application/json:
+              example:
+                result: success
+              schema:
+                $ref: "#/components/schemas/createReadMessage_200_response"
+          description: Server response example
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/createReadMessage_401_response"
+          description: Invalid token
+      summary: Mark message as read
+      tags:
+      - Messaging
+  /uploadMedia:
+    post:
+      operationId: createUploadMedia
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: true
+              type: object
+      responses:
+        "200":
+          description: OK
+      summary: Upload media
+      tags:
+      - Messaging
+  /sendSticker:
+    post:
+      description: Send a WhatsApp sticker by mediaId or link URL.
+      operationId: sendSticker
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/sendSticker_request"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageSentResponse"
+          description: Message sent successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid request parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Rate limit exceeded
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Send sticker message
+      tags:
+      - Messaging
+  /sendCtaUrl:
+    post:
+      description: Send an interactive message with a single call-to-action URL button.
+      operationId: sendCtaUrl
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/sendCtaUrl_request"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageSentResponse"
+          description: Message sent successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid request parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Rate limit exceeded
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Send CTA URL interactive message
+      tags:
+      - Messaging
+  /sendAddressMessage:
+    post:
+      description: |
+        Request shipping address from the user (WhatsApp interactive `address_message`).
+
+        **India and Singapore only.** Requires:
+        - Business WhatsApp number registered in that country
+        - Recipient phone matching the country (`+91` ↔ `IN`, `+65` ↔ `SG`)
+
+        Pass `country: "IN"` or `country: "SG"`. Eligibility is validated upstream;
+        mismatches (e.g. Singapore phone with `country: "IN"`) return errors such as
+        `Unsupported Interactive Message type` (HTTP 200 with `sent: false`).
+
+        Optional action parameters: `values`, `saved_addresses`, `validation_errors`.
+      operationId: sendAddressMessage
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            examples:
+              singapore:
+                summary: Singapore
+                value:
+                  phone: 6531650115
+                  body: Thanks for your order! Tell us what address you’d like this
+                    delivered to.
+                  country: SG
+              india:
+                summary: India
+                value:
+                  phone: 919876543210
+                  body: Thanks for your order! Tell us what address you’d like this
+                    delivered to.
+                  country: IN
+            schema:
+              $ref: "#/components/schemas/sendAddressMessage_request"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageSentResponse"
+          description: Message sent successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid request parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Rate limit exceeded
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Send address request message
+      tags:
+      - Messaging
+  /sendOrderDetails:
+    post:
+      description: |
+        Send a WhatsApp **order details** payment / invoice message using a
+        pre-approved **Utility** template that has an `ORDER_DETAILS` button.
+
+        **India only** (WhatsApp Payments India). Requires:
+        - India WhatsApp Business number
+        - Commerce enabled on the channel (`GET`/`POST /commerce`)
+        - Approved template with an `ORDER_DETAILS` button
+
+        Use this method when you need structured fields (`order`, `referenceId`,
+        `currency`, `paymentSettings`). The API appends a template button
+        `sub_type: order_details` and sends via the same path as `POST /sendTemplate`.
+
+        Works **outside the 24-hour session window** (template message).
+
+        You can also send the same payload yourself with `POST /sendTemplate` by
+        including a button component in `params`:
+
+        ```json
+        {
+          "type": "button",
+          "sub_type": "order_details",
+          "index": 0,
+          "parameters": [{
+            "type": "action",
+            "action": {
+              "order_details": {
+                "reference_id": "order-123",
+                "currency": "INR",
+                "order": { "status": "pending", "items": [], "subtotal": { "offset": 100, "value": 50000 } }
+              }
+            }
+          }]
+        }
+        ```
+      operationId: sendOrderDetails
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            example:
+              phone: 919876543210
+              template: order_details_utility
+              namespace: your_namespace_uuid
+              language:
+                code: en
+              referenceId: order-123
+              currency: INR
+              order:
+                status: pending
+                items:
+                - retailer_id: SKU-1
+                  name: Item
+                  amount:
+                    offset: 100
+                    value: 50000
+                  quantity: 1
+                subtotal:
+                  offset: 100
+                  value: 50000
+            schema:
+              $ref: "#/components/schemas/sendOrderDetails_request"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageSentResponse"
+          description: Message sent successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid request parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Send order details (India payments template)
+      tags:
+      - Messaging
+  /sendPaymentRequest:
+    post:
+      description: |
+        Send a regional payment request interactive message (beta scaffold).
+        `region` must be IN, SG, or BR. Payload shape follows Meta regional payments docs;
+        verify on stage before production use. Full regional builders are not implemented yet.
+      operationId: sendPaymentRequest
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/sendPaymentRequest_request"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageSentResponse"
+          description: Message sent successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid request parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Send payment request (regional)
+      tags:
+      - Messaging
+  /retrieveMedia:
+    get:
+      description: |
+        Get WABA media URL and metadata by mediaId (from uploadMedia).
+        The returned `url` is temporary and typically expires within ~5 minutes.
+      operationId: retrieveMedia
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: mediaId
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/retrieveMedia_200_response"
+          description: Media metadata
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid request parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Retrieve uploaded media metadata
+      tags:
+      - Messaging
+  /media/{mediaId}:
+    delete:
+      description: |
+        Delete previously uploaded media by numeric `mediaId` (from `/uploadMedia`).
+
+        This is the canonical deletion endpoint and uses the REST `DELETE` verb on the
+        media resource path. The older `POST /deleteMedia` is a deprecated alias.
+      operationId: deleteMedia
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      - description: Numeric WABA media id
+        explode: false
+        in: path
+        name: mediaId
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+          description: Operation successful
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid request parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Delete media from WABA storage
+      tags:
+      - Messaging
+  /deleteMedia:
+    post:
+      deprecated: true
+      description: |
+        **Deprecated.** Use `DELETE /media/{mediaId}` instead.
+
+        This POST alias is kept for backward compatibility with earlier integrations.
+        New integrations should call `DELETE /media/{mediaId}`: 1msg follows REST
+        conventions for resource deletion going forward (delete a resource with the
+        `DELETE` verb on its resource path).
+      operationId: deleteMediaLegacy
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/deleteMediaLegacy_request"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+          description: Operation successful
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid request parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Delete media from WABA storage (deprecated alias)
+      tags:
+      - Messaging
+  /blockUser:
+    post:
+      operationId: blockUser
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/blockUser_request"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+          description: Operation successful
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid request parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Block WhatsApp user
+      tags:
+      - Users
+  /unblockUser:
+    post:
+      operationId: unblockUser
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/blockUser_request"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+          description: Operation successful
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid request parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Unblock WhatsApp user
+      tags:
+      - Users
+  /blockedUsers:
+    get:
+      description: |
+        Returns users currently blocked on this WhatsApp channel (WABA `GET /block_users`).
+        Same channel token auth as `blockUser` / `unblockUser`.
+      operationId: listBlockedUsers
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/listBlockedUsers_200_response"
+          description: Blocked users list
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: List blocked WhatsApp users
+      tags:
+      - Users
+  /mmLiteStatus:
+    get:
+      operationId: getMmLiteStatus
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/getMmLiteStatus_200_response"
+          description: MM Lite status for the channel
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Get MM Lite availability and status
+      tags:
+      - Messaging
+  /status:
+    get:
+      description: Returns WhatsApp Business API client connection status.
+      operationId: getStatus
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: Channel status
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Get channel status
+      tags:
+      - Channel
+  /commerce:
+    get:
+      description: |
+        Returns catalog/cart commerce settings for the channel.
+
+        - `is_catalog_visible` — show catalog storefront icon (`true`) or hide it (`false`).
+        - `is_cart_enabled` — enable cart (`true`) or disable it (`false`).
+      operationId: getCommerce
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              example:
+              - id: "789887292550821"
+                is_cart_enabled: true
+                is_catalog_visible: true
+              schema:
+                items:
+                  $ref: "#/components/schemas/getCommerce_200_response_inner"
+                type: array
+          description: Commerce settings
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Get Commerce Settings
+      tags:
+      - Catalog
+    post:
+      description: |
+        Update catalog/cart commerce settings via the `params` object.
+
+        - `params.is_catalog_visible` — show catalog storefront icon (`true`) or hide it (`false`).
+        - `params.is_cart_enabled` — enable cart (`true`) or disable it (`false`).
+
+        Blocked when the channel subscription limit is exceeded.
+        Requires a commerce-capable channel (Cloud Functions `/commerceWAV2`).
+      operationId: createCommerce
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            example:
+              params:
+                is_cart_enabled: true
+                is_catalog_visible: true
+            schema:
+              $ref: "#/components/schemas/createCommerce_request"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              example:
+                success: true
+              schema:
+                $ref: "#/components/schemas/createCommerce_200_response"
+          description: Commerce updated
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Set Commerce Settings
+      tags:
+      - Catalog
+  /conversationalAutomation:
+    get:
+      description: |
+        Get WhatsApp conversational components for the channel (welcome message,
+        ice-breaker prompts, and slash commands).
+
+        Proxies Meta/360dialog `GET /conversational_automation`.
+
+        When `enable_welcome_message` is true and a user opens chat for the first
+        time, Meta delivers a webhook message with `type: request_welcome`. The
+        inbound formatter exposes that as `type: "request_welcome"` and
+        `meta.request_welcome: true` so your webhook can send a custom welcome reply.
+      operationId: getConversationalAutomation
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              example:
+                enable_welcome_message: true
+                prompts:
+                - How can I help?
+                commands:
+                - command_name: help
+                  command_description: Get support options
+              schema:
+                $ref: "#/components/schemas/ConversationalAutomation"
+          description: Conversational automation settings
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Get conversational automation settings
+      tags:
+      - Channel
+    post:
+      description: |
+        Update WhatsApp conversational components.
+
+        Allowed body fields (others are ignored):
+        - `enable_welcome_message` (boolean)
+        - `prompts` (string[], max 4, each ≤ 80 chars)
+        - `commands` (`{ command_name, command_description }[]`)
+
+        Proxies Meta/360dialog `POST /conversational_automation`.
+      operationId: setConversationalAutomation
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            example:
+              enable_welcome_message: true
+              prompts:
+              - How can I help?
+              commands:
+              - command_name: help
+                command_description: Get support options
+            schema:
+              $ref: "#/components/schemas/ConversationalAutomation"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: |
+            Updated settings from WABA, or legacy response.error wrapper on upstream failure.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Set conversational automation settings
+      tags:
+      - Channel
+  /webhook:
+    get:
+      description: Returns the configured client webhook URL for this channel.
+      operationId: getWebhook
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/getWebhook_200_response"
+          description: Current webhook URL
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Get webhook URL
+      tags:
+      - Webhooks
+    post:
+      description: Configure the client webhook URL for inbound events.
+      operationId: setWebhook
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/getWebhook_200_response"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: Webhook configured
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Set webhook URL
+      tags:
+      - Webhooks
+  /callingSettings:
+    get:
+      description: |
+        WhatsApp Calling API settings (beta). Requires Meta Calling enablement on the WABA.
+        Not production-complete — paths and webhook field names may change. Trial/subscription-limited channels are blocked.
+      operationId: getCallingSettings
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: Calling settings
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Get calling settings
+      tags:
+      - Calling
+    post:
+      description: |
+        Update WhatsApp Calling API settings (beta). Requires Meta Calling enablement.
+        Trial/subscription-limited channels are blocked.
+      operationId: updateCallingSettings
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: true
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: Updated
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Update calling settings
+      tags:
+      - Calling
+  /initiateCall:
+    post:
+      description: |
+        Outbound Calling API (beta). Requires Meta Calling enablement and product consent.
+        Not production-complete — verify on stage before relying on this in production.
+        Trial/subscription-limited channels are blocked.
+      operationId: initiateCall
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: true
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: Call initiated
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Initiate WhatsApp call
+      tags:
+      - Calling
+  /groups:
+    get:
+      operationId: listGroups
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: Get Groups List
+      tags:
+      - Groups
+    post:
+      operationId: createGroups
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/createGroups_200_response"
+          description: OK
+      summary: Create Group
+      tags:
+      - Groups
+  /groups/{groupId}:
+    delete:
+      operationId: deleteGroupsGroupId
+      parameters:
+      - example: "{{createdGroupId}}"
+        explode: false
+        in: path
+        name: groupId
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/deleteGroupsGroupId_200_response"
+          description: OK
+      summary: Delete Group
+      tags:
+      - Groups
+    get:
+      operationId: getGroupsGroupId
+      parameters:
+      - example: "{{createdGroupId}}"
+        explode: false
+        in: path
+        name: groupId
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: Get Group Info
+      tags:
+      - Groups
+    post:
+      operationId: createGroupsGroupId
+      parameters:
+      - example: "{{createdGroupId}}"
+        explode: false
+        in: path
+        name: groupId
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: Update Group Info
+      tags:
+      - Groups
+  /groups/{groupId}/inviteLink:
+    get:
+      operationId: getGroupsGroupIdInvitelink
+      parameters:
+      - example: "{{createdGroupId}}"
+        explode: false
+        in: path
+        name: groupId
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: Get Invite Link
+      tags:
+      - Groups
+    post:
+      operationId: createGroupsGroupIdInvitelink
+      parameters:
+      - example: "{{createdGroupId}}"
+        explode: false
+        in: path
+        name: groupId
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: Reset Invite Link
+      tags:
+      - Groups
+  /whatsapp_business_encryption:
+    get:
+      description: |
+        Retrieve the WhatsApp business public key and signature status for this channel's
+        phone number. Required before publishing or sending Flows that use data encryption.
+      operationId: getWhatsappBusinessEncryption
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/getWhatsappBusinessEncryption_200_response"
+          description: Business encryption key status
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Get business encryption public key
+      tags:
+      - Flows
+    post:
+      description: |
+        Upload and sign a 2048-bit RSA business public key (PEM) for this channel's phone number.
+        Meta requires a signed key before Flow publish/send. Only one active key per number;
+        a new upload replaces the previous key.
+      operationId: setWhatsappBusinessEncryption
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/setWhatsappBusinessEncryption_request"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/createCommerce_200_response"
+          description: Public key uploaded and signed
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/createReadMessage_401_response"
+          description: Missing or invalid PEM key
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Set business encryption public key
+      tags:
+      - Flows
+  /flows:
+    get:
+      operationId: listFlows
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      - example: "{{wabaAccountId}}"
+        explode: true
+        in: query
+        name: wabaAccountId
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/listFlows_200_response"
+          description: OK
+      summary: List Flows
+      tags:
+      - Flows
+    post:
+      operationId: createFlows
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      - example: "{{wabaAccountId}}"
+        explode: true
+        in: query
+        name: wabaAccountId
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/createGroups_200_response"
+          description: OK
+      summary: Create Flow
+      tags:
+      - Flows
+  /flows/{flowId}:
+    delete:
+      operationId: deleteFlowsFlowId
+      parameters:
+      - description: Flow ID
+        explode: false
+        in: path
+        name: flowId
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      - example: "{{wabaAccountId}}"
+        explode: true
+        in: query
+        name: wabaAccountId
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/deleteFlowsFlowId_200_response"
+          description: OK
+      summary: Delete Flow
+      tags:
+      - Flows
+    get:
+      operationId: getFlowsFlowId
+      parameters:
+      - description: Flow ID
+        explode: false
+        in: path
+        name: flowId
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      - example: "{{wabaAccountId}}"
+        explode: true
+        in: query
+        name: wabaAccountId
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/createGroups_200_response"
+          description: OK
+      summary: Get Flow Details
+      tags:
+      - Flows
+  /flows/{flowId}/metadata:
+    patch:
+      operationId: patchFlowsFlowIdMetadata
+      parameters:
+      - description: Flow ID
+        explode: false
+        in: path
+        name: flowId
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      - example: "{{wabaAccountId}}"
+        explode: true
+        in: query
+        name: wabaAccountId
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: Update Flow Metadata
+      tags:
+      - Flows
+  /flows/{flowId}/assets:
+    patch:
+      operationId: patchFlowsFlowIdAssets
+      parameters:
+      - description: Flow ID
+        explode: false
+        in: path
+        name: flowId
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      - example: "{{wabaAccountId}}"
+        explode: true
+        in: query
+        name: wabaAccountId
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/patchFlowsFlowIdAssets_200_response"
+          description: OK
+      summary: Update Flow Structure
+      tags:
+      - Flows
+  /flows/{flowId}/preview:
+    get:
+      operationId: getFlowsFlowIdPreview
+      parameters:
+      - description: Flow ID
+        explode: false
+        in: path
+        name: flowId
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      - example: "{{wabaAccountId}}"
+        explode: true
+        in: query
+        name: wabaAccountId
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: Preview Flow
+      tags:
+      - Flows
+  /flows/{flowId}/publish:
+    post:
+      operationId: createFlowsFlowIdPublish
+      parameters:
+      - description: Flow ID
+        explode: false
+        in: path
+        name: flowId
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      - example: "{{wabaAccountId}}"
+        explode: true
+        in: query
+        name: wabaAccountId
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: Publish Flow
+      tags:
+      - Flows
+  /flows/{flowId}/deprecate:
+    post:
+      operationId: createFlowsFlowIdDeprecate
+      parameters:
+      - description: Flow ID
+        explode: false
+        in: path
+        name: flowId
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      - example: "{{wabaAccountId}}"
+        explode: true
+        in: query
+        name: wabaAccountId
+        required: false
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: OK
+      summary: Deprecate Flow
+      tags:
+      - Flows
+  /templates:
+    get:
+      operationId: listTemplates
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/listTemplates_200_response"
+          description: OK
+      summary: Get templates list
+      tags:
+      - Templates
+  /addTemplate:
+    post:
+      operationId: addTemplate
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/addTemplate_request"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: Template created
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Create message template
+      tags:
+      - Templates
+  /removeTemplate:
+    post:
+      operationId: removeTemplate
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: true
+              type: object
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: Template removed
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Remove message template
+      tags:
+      - Templates
+components:
+  parameters:
+    flowId:
+      description: Flow ID
+      explode: false
+      in: path
+      name: flowId
+      required: true
+      schema:
+        type: string
+      style: simple
+    token:
+      description: JWT token or API key for authorization
+      explode: true
+      in: query
+      name: token
+      required: true
+      schema:
+        type: string
+      style: form
+    date:
+      description: Filter by date (YYYY-MM-DD)
+      explode: true
+      in: query
+      name: date
+      required: false
+      schema:
+        format: date
+        type: string
+      style: form
+    groupId:
+      description: Group ID (phone number with country code)
+      explode: false
+      in: path
+      name: groupId
+      required: true
+      schema:
+        type: string
+      style: simple
+  requestBodies: {}
+  responses:
+    InvalidToken:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      description: Invalid or missing authentication token
+    InternalError:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      description: Internal server error
+    MessageSent:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/MessageSentResponse"
+      description: Message sent successfully
+    BadRequest:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      description: Invalid request parameters
+    TooManyRequests:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      description: Rate limit exceeded
+    Success:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/SuccessResponse"
+      description: Operation successful
+  schemas:
+    ErrorResponse:
+      description: Standard error response
+      example:
+        error: error
+      properties:
+        error:
+          description: Error message
+          type: string
+      type: object
+    MessageSentResponse:
+      additionalProperties: true
+      description: Response for successfully sent message
+      example:
+        description: description
+        id: id
+        message: message
+        sent: true
+      properties:
+        sent:
+          description: Whether the message was successfully queued for sending
+          type: boolean
+        id:
+          description: Message ID
+          type: string
+        message:
+          description: Status message
+          type: string
+        description:
+          description: Detailed description
+          type: string
+      type: object
+    SuccessResponse:
+      additionalProperties: true
+      description: Generic success response
+      example:
+        result: result
+      properties:
+        result:
+          description: Operation result
+          type: string
+      type: object
+    ProfileInfo:
+      additionalProperties: true
+      description: WhatsApp Business profile information
+      example:
+        address: address
+        phone: phone
+        about: about
+        description: description
+        photo: photo
+        vertical: Automotive
+        websites:
+        - websites
+        - websites
+        email: email
+      properties:
+        about:
+          description: Profile's About section
+          type: string
+        address:
+          description: Address of the business
+          type: string
+        description:
+          description: Description of the business
+          type: string
+        email:
+          description: Business email
+          type: string
+        phone:
+          description: Linked phone number
+          type: string
+        vertical:
+          description: Industry of the business
+          enum:
+          - Automotive
+          - "Beauty, Spa and Salon"
+          - Clothing and Apparel
+          - Education
+          - Entertainment
+          - Event Planning and Service
+          - Finance and Banking
+          - Food and Grocery
+          - Public Service
+          - Hotel and Lodging
+          - Medical and Health
+          - Non-profit
+          - Professional Services
+          - Shopping and Retail
+          - Travel and Transportation
+          - Restaurant
+          - Other
+          type: string
+        photo:
+          description: Profile photo URL
+          type: string
+        websites:
+          items:
+            type: string
+          type: array
+      type: object
+    ConversationalAutomation:
+      additionalProperties: true
+      example:
+        enable_welcome_message: true
+        prompts:
+        - prompts
+        - prompts
+        - prompts
+        - prompts
+        commands:
+        - command_name: command_name
+          command_description: command_description
+        - command_name: command_name
+          command_description: command_description
+        - command_name: command_name
+          command_description: command_description
+        - command_name: command_name
+          command_description: command_description
+        - command_name: command_name
+          command_description: command_description
+      properties:
+        enable_welcome_message:
+          description: Enable the automatic welcome message for new conversations
+          type: boolean
+        prompts:
+          description: "Ice-breaker prompt strings (max 4, each ≤ 80 characters)"
+          items:
+            maxLength: 80
+            type: string
+          maxItems: 4
+          type: array
+        commands:
+          description: Slash commands shown in WhatsApp
+          items:
+            $ref: "#/components/schemas/ConversationalAutomation_commands_inner"
+          maxItems: 30
+          type: array
+      type: object
+    SendMessageRequest:
+      additionalProperties: false
+      description: Request body for sending a text message
+      properties:
+        body:
+          description: "Message text, UTF-8 or UTF-16 string with emoji"
+          example: Hello World 🌍
+          maxLength: 4096
+          minLength: 1
+          type: string
+        quotedMsgId:
+          description: Message ID to quote/reply to (Cloud API wamid)
+          example: wamid.HBgNMTIwMjA3MjEzNjkVAgARGBI5RTBCNUY0QUE2RjZBQzhGNDkA
+          pattern: ^wamid\..+$
+          type: string
+        chatId:
+          description: "Chat ID in format: phone@c.us (individual) or phone@g.us (group)"
+          example: 12020721369@c.us
+          pattern: "^[0-9]+@[cg]\\.us$"
+          type: string
+        phone:
+          description: Phone number starting with country code (alternative to chatId)
+          example: 12020721369
+          maximum: 999999999999999
+          minimum: 1000000000
+          type: integer
+      required:
+      - body
+      type: object
+    SendFileRequest:
+      additionalProperties: true
+      description: Send file by URL/base64 or by mediaId
+      properties:
+        body:
+          description: |
+            File source (required unless mediaId is set):
+            - HTTP/HTTPS URL
+            - Base64 data URI
+          type: string
+        filename:
+          description: "File name with extension (required with body, not with mediaId)"
+          type: string
+        mediaId:
+          description: WABA media id from uploadMedia (alternative to body)
+          type: string
+        mediaType:
+          description: Required when using mediaId
+          enum:
+          - image
+          - video
+          - audio
+          - document
+          type: string
+        voice:
+          description: Native WhatsApp voice note (audio/ogg only)
+          type: boolean
+        caption:
+          maxLength: 1024
+          type: string
+        quotedMsgId:
+          type: string
+        chatId:
+          type: string
+        phone:
+          type: integer
+      type: object
+    updateMe_request:
+      additionalProperties: true
+      properties:
+        about:
+          description: Profile About section
+          type: string
+        address:
+          type: string
+        description:
+          description: Business description (max 256 characters)
+          type: string
+        email:
+          type: string
+        vertical:
+          description: Industry of the business
+          type: string
+        photo:
+          description: "HTTPS URL or data:image/...;base64,... payload"
+          type: string
+        websites:
+          items:
+            type: string
+          type: array
+      type: object
+    sendLocation_request:
+      properties:
+        lat:
+          description: "Latitude of the location. Example: 45.018337"
+          type: string
+        lng:
+          description: "Longitude of the location. Example: -73.968285"
+          type: string
+        address:
+          description: "Address of the location. Only displayed if name is present.\
+            \ Example: 9766 Valley View St., New York, NY 10024"
+          type: string
+        name:
+          description: "Name of the location. Example: Facebook HQ"
+          type: string
+        quotedMsgId:
+          description: Quoted message ID (Cloud API)
+          type: string
+        chatId:
+          description: "Required if phone is not set. Chat ID from the message list.\
+            \ Examples: 12020721369@c.us or 120363046942338209@g.us(group)"
+          type: string
+        phone:
+          description: "Required if chatId is not set. A phone number starting with\
+            \ the country code. USA example: 12020721369."
+          type: integer
+      required:
+      - lat
+      - lng
+      type: object
+    sendLocation_request_1:
+      properties:
+        lat:
+          type: string
+        lng:
+          type: string
+        address:
+          type: string
+        name:
+          type: string
+        quotedMsgId:
+          type: string
+        chatId:
+          type: string
+        phone:
+          type: integer
+      required:
+      - lat
+      - lng
+      type: object
+    sendContact_request_contacts_inner_name:
+      properties:
+        formatted_name:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        middle_name:
+          type: string
+        suffix:
+          type: string
+        prefix:
+          type: string
+      type: object
+    sendContact_request_contacts_inner_org:
+      properties:
+        company:
+          type: string
+        department:
+          type: string
+        title:
+          type: string
+      type: object
+    sendContact_request_contacts_inner_phones_inner:
+      properties:
+        phone:
+          format: utc-millisec
+          type: string
+        type:
+          type: string
+        wa_id:
+          type: string
+      type: object
+    sendContact_request_contacts_inner:
+      properties:
+        name:
+          $ref: "#/components/schemas/sendContact_request_contacts_inner_name"
+        birthday:
+          type: string
+        addresses:
+          items: {}
+          type: array
+        emails:
+          items: {}
+          type: array
+        org:
+          $ref: "#/components/schemas/sendContact_request_contacts_inner_org"
+        phones:
+          items:
+            $ref: "#/components/schemas/sendContact_request_contacts_inner_phones_inner"
+          type: array
+        urls:
+          items: {}
+          type: array
+      type: object
+    sendContact_request:
+      properties:
+        phone:
+          type: string
+        contacts:
+          items:
+            $ref: "#/components/schemas/sendContact_request_contacts_inner"
+          type: array
+      type: object
+    sendList_request_sections_inner_rows_inner:
+      properties:
+        id:
+          format: utc-millisec
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+      type: object
+    sendList_request_sections_inner:
+      properties:
+        title:
+          type: string
+        rows:
+          items:
+            $ref: "#/components/schemas/sendList_request_sections_inner_rows_inner"
+          type: array
+      type: object
+    sendList_request:
+      properties:
+        phone:
+          type: string
+        body:
+          type: string
+        buttonText:
+          type: string
+        action:
+          type: string
+        sections:
+          items:
+            $ref: "#/components/schemas/sendList_request_sections_inner"
+          type: array
+      type: object
+    sendButton_request_sections_inner_reply:
+      properties:
+        id:
+          format: utc-millisec
+          type: string
+        title:
+          type: string
+      type: object
+    sendButton_request_sections_inner:
+      properties:
+        type:
+          type: string
+        reply:
+          $ref: "#/components/schemas/sendButton_request_sections_inner_reply"
+      type: object
+    sendButton_request:
+      properties:
+        phone:
+          type: string
+        body:
+          type: string
+        footer:
+          type: string
+        sections:
+          items:
+            $ref: "#/components/schemas/sendButton_request_sections_inner"
+          type: array
+      type: object
+    sendLocationRequest_request:
+      properties:
+        phone:
+          type: string
+        body:
+          type: string
+      type: object
+    sendFlow_request_header:
+      description: Flow header (string or text header object)
+      oneOf:
+      - type: string
+      - type: object
+    sendFlow_request:
+      properties:
+        body:
+          description: Flow message body text
+          type: string
+        header:
+          $ref: "#/components/schemas/sendFlow_request_header"
+        footer:
+          description: Footer text
+          type: string
+        flowId:
+          description: Published Flow ID
+          type: string
+        flowToken:
+          description: Flow token generated by the business
+          type: string
+        flowCta:
+          description: CTA button text
+          type: string
+        flowAction:
+          description: Flow action type
+          enum:
+          - navigate
+          - data_exchange
+          type: string
+        flowActionPayload:
+          description: "Required for flowAction=navigate (screen is required). Ignored\
+            \ for data_exchange. If data is provided, it must be a non-empty object."
+          type: object
+        flowMessageVersion:
+          description: Flow message version (default "3")
+          type: string
+        mode:
+          description: "Flow mode (draft or published). If omitted, provider default\
+            \ applies"
+          enum:
+          - draft
+          - published
+          type: string
+        flowActionData:
+          description: Shortcut for flowActionPayload.data (optional)
+          type: object
+        flowActionScreen:
+          description: Shortcut for flowActionPayload.screen (optional)
+          type: string
+        quotedMsgId:
+          description: Quoted message ID (Cloud API)
+          type: string
+        chatId:
+          description: "Required if phone is not set. Chat ID from the message list.\
+            \ Examples: 12020721369@c.us or 120363046942338209@g.us(group)"
+          type: string
+        phone:
+          description: "Required if chatId is not set. A phone number starting with\
+            \ the country code. USA example: 12020721369."
+          type: integer
+      required:
+      - body
+      - flowCta
+      - flowId
+      - flowToken
+      type: object
+    sendFlow_request_1_header:
+      oneOf:
+      - type: string
+      - type: object
+    sendFlow_request_1:
+      properties:
+        body:
+          type: string
+        header:
+          $ref: "#/components/schemas/sendFlow_request_1_header"
+        footer:
+          type: string
+        flowId:
+          type: string
+        flowToken:
+          type: string
+        flowCta:
+          type: string
+        flowAction:
+          enum:
+          - navigate
+          - data_exchange
+          type: string
+        flowActionPayload:
+          type: object
+        flowMessageVersion:
+          type: string
+        mode:
+          enum:
+          - draft
+          - published
+          type: string
+        flowActionData:
+          type: object
+        flowActionScreen:
+          type: string
+        quotedMsgId:
+          type: string
+        chatId:
+          type: string
+        phone:
+          type: integer
+      required:
+      - body
+      - flowCta
+      - flowId
+      - flowToken
+      type: object
+    sendReaction_request:
+      properties:
+        phone:
+          type: string
+        body:
+          type: string
+        quotedMsgId:
+          type: string
+      type: object
+    sendCarousel_request:
+      properties:
+        body:
+          description: "Text shown above the carousel. Optional. If omitted and params\
+            \ include a body component, the body will be taken from params."
+          type: string
+        params:
+          description: |
+            Required. Template-like structure (same as sendTemplate params). Must include a CAROUSEL component and its cards.
+
+            Structure:
+            - params[] item with type CAROUSEL and cards (2..10)
+            - cards[] item:
+              - components[] items:
+                - header: parameters[0] with type image/video/product
+                  - image: {"image": {"link": "https://..."}}
+                  - video: {"video": {"link": "https://..."}}
+                  - product: {"product": {"catalog_id": "...", "product_retailer_id": "..."}}
+                - button: sub_type url or quick_reply
+                  - url: parameters {"text": "Button", "url": "https://..."}
+                  - quick_reply: parameters[] of {"id": "...", "text": "..."}
+          items:
+            type: object
+          type: array
+        quotedMsgId:
+          description: Quoted message ID (Cloud API)
+          type: string
+        chatId:
+          description: "Required if phone is not set. Chat ID from the message list.\
+            \ Examples: 12020721369@c.us or 120363046942338209@g.us(group)"
+          type: string
+        phone:
+          description: "Required if chatId is not set. A phone number starting with\
+            \ the country code. USA example: 12020721369."
+          type: integer
+      required:
+      - params
+      type: object
+    sendCarousel_request_1:
+      properties:
+        body:
+          type: string
+        params:
+          items:
+            type: object
+          type: array
+        quotedMsgId:
+          type: string
+        chatId:
+          type: string
+        phone:
+          type: integer
+      required:
+      - params
+      type: object
+    sendTemplate_request_language:
+      properties:
+        policy:
+          type: string
+        code:
+          type: string
+      type: object
+    sendTemplate_request:
+      properties:
+        template:
+          type: string
+        language:
+          $ref: "#/components/schemas/sendTemplate_request_language"
+        namespace:
+          type: string
+        params:
+          items: {}
+          type: array
+        phone:
+          type: string
+        useMMlite:
+          description: |
+            Force Marketing Messages API (POST marketing_messages).
+            If omitted: auto for MARKETING category when channel has mm_lite_enabled
+            and mm_lite_available service settings.
+          type: boolean
+        messageActivitySharing:
+          description: |
+            Sets message_activity_sharing on WABA payload. Enables click tracking webhooks.
+            Requires MM Lite path. Ignored on Cloud API fallback.
+          type: boolean
+        messageSendTtlSeconds:
+          description: |
+            Template message TTL in seconds (message_send_ttl_seconds).
+            MARKETING via MM Lite: 43200–2592000. AUTHENTICATION: 30–900.
+            UTILITY: 30–43200. AUTH/UTILITY also accept -1 (30-day custom TTL).
+          type: integer
+      type: object
+    listMessages_200_response:
+      additionalProperties: true
+      example:
+        messages:
+        - key: ""
+        - key: ""
+        notice: notice
+      properties:
+        notice:
+          type: string
+        messages:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+      type: object
+    createReadMessage_request:
+      properties:
+        messageId:
+          type: string
+        msgId:
+          type: string
+        typingIndicator:
+          default: false
+          description: Show WhatsApp typing indicator (max 25s or until reply)
+          type: boolean
+      type: object
+    createReadMessage_200_response:
+      additionalProperties: true
+      example:
+        result: result
+      properties:
+        result:
+          type: string
+      type: object
+    createReadMessage_401_response:
+      example:
+        error: error
+      properties:
+        error:
+          type: string
+      type: object
+    sendSticker_request:
+      additionalProperties: true
+      properties:
+        phone:
+          type: integer
+        chatId:
+          type: string
+        mediaId:
+          description: WABA media id from uploadMedia
+          type: string
+        link:
+          description: Public URL to webp sticker
+          type: string
+        quotedMsgId:
+          type: string
+      type: object
+    sendCtaUrl_request:
+      additionalProperties: true
+      properties:
+        phone:
+          type: integer
+        chatId:
+          type: string
+        body:
+          type: string
+        displayText:
+          description: Button label
+          type: string
+        url:
+          format: uri
+          type: string
+        header:
+          additionalProperties: true
+          type: object
+        footer:
+          type: string
+        quotedMsgId:
+          type: string
+      required:
+      - body
+      - displayText
+      - url
+      type: object
+    sendAddressMessage_request:
+      additionalProperties: true
+      properties:
+        phone:
+          description: "Recipient phone (E.164 digits, no +). Must match country."
+          type: integer
+        chatId:
+          type: string
+        body:
+          description: Body text shown with the address request
+          type: string
+        country:
+          description: Address form country. Defaults to IN if omitted.
+          enum:
+          - IN
+          - SG
+          example: SG
+          type: string
+        values:
+          additionalProperties: true
+          description: Optional prefilled address fields
+          type: object
+        saved_addresses:
+          description: Optional previously saved addresses for the user
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+        validation_errors:
+          additionalProperties: true
+          description: Optional field validation errors when re-prompting
+          type: object
+        quotedMsgId:
+          type: string
+      required:
+      - body
+      type: object
+    sendOrderDetails_request_language:
+      additionalProperties: true
+      description: Template language
+      properties:
+        code:
+          description: Language code
+          example: en
+          type: string
+        policy:
+          description: Optional language policy
+          example: deterministic
+          type: string
+      required:
+      - code
+      type: object
+    sendOrderDetails_request_order_items_inner_amount:
+      additionalProperties: true
+      properties:
+        offset:
+          example: 100
+          type: integer
+        value:
+          example: 50000
+          type: integer
+      type: object
+    sendOrderDetails_request_order_items_inner:
+      additionalProperties: true
+      properties:
+        retailer_id:
+          example: SKU-1
+          type: string
+        name:
+          example: Item
+          type: string
+        quantity:
+          example: 1
+          type: integer
+        amount:
+          $ref: "#/components/schemas/sendOrderDetails_request_order_items_inner_amount"
+      type: object
+    sendOrderDetails_request_order:
+      additionalProperties: true
+      description: |
+        Order payload for the ORDER_DETAILS button. Typical fields: status, items[], subtotal, tax, shipping, discount. Amount objects use `{ "offset": 100, "value": <minor_units> }` (e.g. value 50000 with offset 100 = ₹500.00).
+      properties:
+        status:
+          description: Order status
+          example: pending
+          type: string
+        items:
+          description: Line items
+          items:
+            $ref: "#/components/schemas/sendOrderDetails_request_order_items_inner"
+          type: array
+        subtotal:
+          $ref: "#/components/schemas/sendOrderDetails_request_order_items_inner_amount"
+        tax:
+          additionalProperties: true
+          type: object
+        shipping:
+          additionalProperties: true
+          type: object
+        discount:
+          additionalProperties: true
+          type: object
+      required:
+      - items
+      type: object
+    sendOrderDetails_request:
+      additionalProperties: true
+      properties:
+        phone:
+          description: "Recipient phone (India E.164 digits, no +). Use phone or chatId."
+          example: 919876543210
+          type: integer
+        chatId:
+          description: Recipient chatId (e.g. phone@c.us). Use phone or chatId.
+          type: string
+        template:
+          description: Approved Utility template name that includes an ORDER_DETAILS
+            button
+          example: order_details_utility
+          type: string
+        namespace:
+          description: Template namespace from the channel / template list
+          example: your_namespace_uuid
+          type: string
+        language:
+          $ref: "#/components/schemas/sendOrderDetails_request_language"
+        params:
+          description: |
+            Extra template components (HEADER / BODY / etc.). If an order_details button is missing, the API appends one from order / referenceId / currency / paymentSettings.
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+        referenceId:
+          description: Unique order / payment reference id (maps to reference_id)
+          example: order-123
+          type: string
+        currency:
+          description: Currency code for India payments
+          example: INR
+          type: string
+        paymentSettings:
+          additionalProperties: true
+          description: |
+            Optional payment settings (UPI / payment gateway / payment link). Forwarded as payment_settings on the order_details action.
+          type: object
+        order:
+          $ref: "#/components/schemas/sendOrderDetails_request_order"
+      required:
+      - language
+      - namespace
+      - order
+      - template
+      type: object
+    sendPaymentRequest_request:
+      additionalProperties: true
+      properties:
+        phone:
+          type: integer
+        region:
+          enum:
+          - IN
+          - SG
+          - BR
+          type: string
+        body:
+          type: string
+        interactive:
+          additionalProperties: true
+          type: object
+        action:
+          additionalProperties: true
+          type: object
+      required:
+      - phone
+      - region
+      type: object
+    retrieveMedia_200_response:
+      additionalProperties: true
+      example:
+        sha256: sha256
+        fileSize: 0
+        mimeType: mimeType
+        id: id
+        url: url
+      properties:
+        url:
+          type: string
+        mimeType:
+          type: string
+        sha256:
+          type: string
+        fileSize:
+          type: integer
+        id:
+          type: string
+      type: object
+    deleteMediaLegacy_request:
+      additionalProperties: true
+      properties:
+        mediaId:
+          description: Numeric WABA media id
+          type: string
+      required:
+      - mediaId
+      type: object
+    blockUser_request:
+      additionalProperties: true
+      properties:
+        phone:
+          type: integer
+      required:
+      - phone
+      type: object
+    listBlockedUsers_200_response:
+      additionalProperties: true
+      example:
+        blockedUsers:
+        - key: ""
+        - key: ""
+      properties:
+        blockedUsers:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+      type: object
+    getMmLiteStatus_200_response:
+      additionalProperties: true
+      example:
+        available: true
+        message: message
+        status: status
+      properties:
+        available:
+          type: boolean
+        status:
+          type: string
+        message:
+          type: string
+      type: object
+    getCommerce_200_response_inner:
+      additionalProperties: true
+      example:
+        is_catalog_visible: true
+        is_cart_enabled: true
+        id: id
+      properties:
+        id:
+          description: Catalog id
+          type: string
+        is_cart_enabled:
+          description: Whether the cart is enabled
+          type: boolean
+        is_catalog_visible:
+          description: Whether the catalog storefront icon is shown
+          type: boolean
+      type: object
+    createCommerce_request_params:
+      additionalProperties: true
+      properties:
+        is_cart_enabled:
+          description: Enable cart
+          type: boolean
+        is_catalog_visible:
+          description: Show catalog storefront icon
+          type: boolean
+      required:
+      - is_cart_enabled
+      - is_catalog_visible
+      type: object
+    createCommerce_request:
+      additionalProperties: true
+      properties:
+        params:
+          $ref: "#/components/schemas/createCommerce_request_params"
+      required:
+      - params
+      type: object
+    createCommerce_200_response:
+      additionalProperties: true
+      example:
+        success: true
+      properties:
+        success:
+          type: boolean
+      type: object
+    getWebhook_200_response:
+      additionalProperties: true
+      example:
+        webhookUrl: webhookUrl
+      properties:
+        webhookUrl:
+          type: string
+      type: object
+    createGroups_200_response:
+      additionalProperties: true
+      example:
+        error: ""
+      properties:
+        error:
+          description: Error details returned by the provider. May be a string or
+            a JSON object.
+      type: object
+    deleteGroupsGroupId_200_response:
+      additionalProperties: true
+      example:
+        success: true
+        response:
+          key: ""
+      properties:
+        success:
+          type: boolean
+        response:
+          additionalProperties: true
+          type: object
+      type: object
+    getWhatsappBusinessEncryption_200_response:
+      additionalProperties: true
+      example:
+        data:
+        - key: ""
+        - key: ""
+        business_public_key_signature_status: VALID
+        business_public_key: business_public_key
+      properties:
+        business_public_key:
+          description: Stored 2048-bit RSA public key (PEM)
+          type: string
+        business_public_key_signature_status:
+          enum:
+          - VALID
+          - MISMATCH
+          type: string
+        data:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+      type: object
+    setWhatsappBusinessEncryption_request:
+      properties:
+        business_public_key:
+          description: 2048-bit RSA public key in PEM format
+          example: |
+            -----BEGIN PUBLIC KEY-----
+            MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
+            -----END PUBLIC KEY-----
+          type: string
+      required:
+      - business_public_key
+      type: object
+    listFlows_200_response:
+      additionalProperties: true
+      example:
+        total: 6
+        count: 0
+        paging:
+          key: ""
+        error: ""
+        items:
+        - key: ""
+        - key: ""
+      properties:
+        items:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+        paging:
+          additionalProperties: true
+          type: object
+        count:
+          type: integer
+        total:
+          type: integer
+        error:
+          description: Error details returned by the provider. May be a string or
+            a JSON object.
+      type: object
+    deleteFlowsFlowId_200_response:
+      additionalProperties: true
+      example:
+        success: true
+        error: ""
+      properties:
+        success:
+          type: boolean
+        error:
+          description: Error details returned by the provider. May be a string or
+            a JSON object.
+      type: object
+    patchFlowsFlowIdAssets_200_response:
+      additionalProperties: true
+      example:
+        success: true
+        validationErrors:
+        - key: ""
+        - key: ""
+        error: ""
+      properties:
+        success:
+          type: boolean
+        validationErrors:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+        error:
+          description: Error details returned by the provider. May be a string or
+            a JSON object.
+      type: object
+    listTemplates_200_response:
+      additionalProperties: true
+      example:
+        total: 0
+        templates:
+        - key: ""
+        - key: ""
+        error:
+          key: ""
+      properties:
+        total:
+          type: integer
+        templates:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+        error:
+          additionalProperties: true
+          type: object
+      type: object
+    addTemplate_request:
+      additionalProperties: true
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        language:
+          type: string
+        components:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+      type: object
+    ConversationalAutomation_commands_inner:
+      additionalProperties: true
+      example:
+        command_name: command_name
+        command_description: command_description
+      properties:
+        command_name:
+          maxLength: 32
+          type: string
+        command_description:
+          maxLength: 256
+          type: string
+      required:
+      - command_description
+      - command_name
+      type: object
+  securitySchemes:
+    tokenAuth:
+      description: JWT token or API key
+      in: query
+      name: token
+      type: apiKey
