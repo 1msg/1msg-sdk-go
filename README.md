@@ -21,7 +21,7 @@ auth, quick start, and every public operation available in the client.
 ## Install
 
 ```bash
-go get github.com/1msg/1msg-sdk-go@v1.0.1
+go get github.com/1msg/1msg-sdk-go@v1.1.0
 ```
 
 ## Requirements
@@ -43,15 +43,15 @@ import (
   "context"
   "os"
 
-  onemsgchatapi "github.com/1msg/1msg-sdk-go"
+  onemsgsdk "github.com/1msg/1msg-sdk-go"
 )
 
 func main() {
-  cfg := onemsgchatapi.NewConfiguration()
-  cfg.Servers = onemsgchatapi.ServerConfigurations{
+  cfg := onemsgsdk.NewConfiguration()
+  cfg.Servers = onemsgsdk.ServerConfigurations{
     {URL: "https://api.1msg.io/" + os.Getenv("MSG_INSTANCE_ID")},
   }
-  client := onemsgchatapi.NewAPIClient(cfg)
+  client := onemsgsdk.NewAPIClient(cfg)
 
   _, _, err := client.MessagingAPI.SendMessage(context.Background()).
     Token(os.Getenv("MSG_API_TOKEN")).
@@ -100,7 +100,7 @@ client.WebhooksAPI    // webhooks
 
 ## Package notes
 
-Go module path is `github.com/1msg/1msg-sdk-go`. Import package name is `onemsgchatapi`.
+Go module path is `github.com/1msg/1msg-sdk-go`. Import package name is `onemsgsdk`.
 
 ## API reference
 

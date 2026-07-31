@@ -10,7 +10,7 @@ package: "github.com/1msg/1msg-sdk-go"
 registry: https://pkg.go.dev/github.com/1msg/1msg-sdk-go
 repository: https://github.com/1msg/1msg-sdk-go
 language: Go
-version: 1.0.1
+version: 1.1.0
 public_only: true
 never_mention: chat-api
 ```
