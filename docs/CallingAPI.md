@@ -5,14 +5,14 @@ All URIs are relative to *https://api.1msg.io*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**GetCallingSettings**](CallingAPI.md#GetCallingSettings) | **Get** /callingSettings | Get calling settings
-[**InitiateCall**](CallingAPI.md#InitiateCall) | **Post** /initiateCall | Initiate WhatsApp call
+[**InitiateCall**](CallingAPI.md#InitiateCall) | **Post** /initiateCall | Call action (connect / pre_accept / accept / reject / terminate)
 [**UpdateCallingSettings**](CallingAPI.md#UpdateCallingSettings) | **Post** /callingSettings | Update calling settings
 
 
 
 ## GetCallingSettings
 
-> map[string]interface{} GetCallingSettings(ctx).Token(token).Execute()
+> CallingSettings GetCallingSettings(ctx).Token(token).Execute()
 
 Get calling settings
 
@@ -40,7 +40,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error when calling `CallingAPI.GetCallingSettings``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
 	}
-	// response from `GetCallingSettings`: map[string]interface{}
+	// response from `GetCallingSettings`: CallingSettings
 	fmt.Fprintf(os.Stdout, "Response from `CallingAPI.GetCallingSettings`: %v\n", resp)
 }
 ```
@@ -60,7 +60,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-**map[string]interface{}**
+[**CallingSettings**](CallingSettings.md)
 
 ### Authorization
 
@@ -78,9 +78,9 @@ Name | Type | Description  | Notes
 
 ## InitiateCall
 
-> map[string]interface{} InitiateCall(ctx).Token(token).RequestBody(requestBody).Execute()
+> InitiateCallResponse InitiateCall(ctx).Token(token).InitiateCallRequest(initiateCallRequest).Execute()
 
-Initiate WhatsApp call
+Call action (connect / pre_accept / accept / reject / terminate)
 
 
 
@@ -98,16 +98,16 @@ import (
 
 func main() {
 	token := "token_example" // string | JWT token or API key for authorization
-	requestBody := map[string]interface{}{"key": interface{}(123)} // map[string]interface{} |  (optional)
+	initiateCallRequest := *openapiclient.NewInitiateCallRequest("whatsapp", "connect") // InitiateCallRequest | 
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.CallingAPI.InitiateCall(context.Background()).Token(token).RequestBody(requestBody).Execute()
+	resp, r, err := apiClient.CallingAPI.InitiateCall(context.Background()).Token(token).InitiateCallRequest(initiateCallRequest).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `CallingAPI.InitiateCall``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
 	}
-	// response from `InitiateCall`: map[string]interface{}
+	// response from `InitiateCall`: InitiateCallResponse
 	fmt.Fprintf(os.Stdout, "Response from `CallingAPI.InitiateCall`: %v\n", resp)
 }
 ```
@@ -124,11 +124,11 @@ Other parameters are passed through a pointer to a apiInitiateCallRequest struct
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **token** | **string** | JWT token or API key for authorization | 
- **requestBody** | **map[string]interface{}** |  | 
+ **initiateCallRequest** | [**InitiateCallRequest**](InitiateCallRequest.md) |  | 
 
 ### Return type
 
-**map[string]interface{}**
+[**InitiateCallResponse**](InitiateCallResponse.md)
 
 ### Authorization
 
@@ -146,7 +146,7 @@ Name | Type | Description  | Notes
 
 ## UpdateCallingSettings
 
-> map[string]interface{} UpdateCallingSettings(ctx).Token(token).RequestBody(requestBody).Execute()
+> UpdateCallingSettings200Response UpdateCallingSettings(ctx).Token(token).CallingSettings(callingSettings).Execute()
 
 Update calling settings
 
@@ -166,16 +166,16 @@ import (
 
 func main() {
 	token := "token_example" // string | JWT token or API key for authorization
-	requestBody := map[string]interface{}{"key": interface{}(123)} // map[string]interface{} |  (optional)
+	callingSettings := *openapiclient.NewCallingSettings() // CallingSettings | 
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.CallingAPI.UpdateCallingSettings(context.Background()).Token(token).RequestBody(requestBody).Execute()
+	resp, r, err := apiClient.CallingAPI.UpdateCallingSettings(context.Background()).Token(token).CallingSettings(callingSettings).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `CallingAPI.UpdateCallingSettings``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
 	}
-	// response from `UpdateCallingSettings`: map[string]interface{}
+	// response from `UpdateCallingSettings`: UpdateCallingSettings200Response
 	fmt.Fprintf(os.Stdout, "Response from `CallingAPI.UpdateCallingSettings`: %v\n", resp)
 }
 ```
@@ -192,11 +192,11 @@ Other parameters are passed through a pointer to a apiUpdateCallingSettingsReque
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **token** | **string** | JWT token or API key for authorization | 
- **requestBody** | **map[string]interface{}** |  | 
+ **callingSettings** | [**CallingSettings**](CallingSettings.md) |  | 
 
 ### Return type
 
-**map[string]interface{}**
+[**UpdateCallingSettings200Response**](UpdateCallingSettings200Response.md)
 
 ### Authorization
 

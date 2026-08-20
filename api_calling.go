@@ -35,15 +35,24 @@ func (r ApiGetCallingSettingsRequest) Token(token string) ApiGetCallingSettingsR
 	return r
 }
 
-func (r ApiGetCallingSettingsRequest) Execute() (map[string]interface{}, *http.Response, error) {
+func (r ApiGetCallingSettingsRequest) Execute() (*CallingSettings, *http.Response, error) {
 	return r.ApiService.GetCallingSettingsExecute(r)
 }
 
 /*
 GetCallingSettings Get calling settings
 
-WhatsApp Calling API settings (beta). Requires Meta Calling enablement on the WABA.
-Not production-complete — paths and webhook field names may change. Trial/subscription-limited channels are blocked.
+Return WhatsApp Calling API settings for this channel (beta).
+
+Proxies upstream `GET /calling/settings`.
+
+**Prerequisites**
+- Number must be eligible for Meta Calling (Cloud API; not COEX)
+- Trial / `subscriptionBlocked` channels receive **403** plain text
+- You need your own WebRTC or SIP stack; 1msg is a **signaling proxy** only
+  and does **not** store call history or recordings
+
+See the **Calling** tag overview for inbound/outbound flows and webhooks.
 
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
@@ -57,13 +66,13 @@ func (a *CallingAPIService) GetCallingSettings(ctx context.Context) ApiGetCallin
 }
 
 // Execute executes the request
-//  @return map[string]interface{}
-func (a *CallingAPIService) GetCallingSettingsExecute(r ApiGetCallingSettingsRequest) (map[string]interface{}, *http.Response, error) {
+//  @return CallingSettings
+func (a *CallingAPIService) GetCallingSettingsExecute(r ApiGetCallingSettingsRequest) (*CallingSettings, *http.Response, error) {
 	var (
 		localVarHTTPMethod   = http.MethodGet
 		localVarPostBody     interface{}
 		formFiles            []formFile
-		localVarReturnValue  map[string]interface{}
+		localVarReturnValue  *CallingSettings
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CallingAPIService.GetCallingSettings")
@@ -174,7 +183,7 @@ type ApiInitiateCallRequest struct {
 	ctx context.Context
 	ApiService *CallingAPIService
 	token *string
-	requestBody *map[string]interface{}
+	initiateCallRequest *InitiateCallRequest
 }
 
 // JWT token or API key for authorization
@@ -183,21 +192,46 @@ func (r ApiInitiateCallRequest) Token(token string) ApiInitiateCallRequest {
 	return r
 }
 
-func (r ApiInitiateCallRequest) RequestBody(requestBody map[string]interface{}) ApiInitiateCallRequest {
-	r.requestBody = &requestBody
+func (r ApiInitiateCallRequest) InitiateCallRequest(initiateCallRequest InitiateCallRequest) ApiInitiateCallRequest {
+	r.initiateCallRequest = &initiateCallRequest
 	return r
 }
 
-func (r ApiInitiateCallRequest) Execute() (map[string]interface{}, *http.Response, error) {
+func (r ApiInitiateCallRequest) Execute() (*InitiateCallResponse, *http.Response, error) {
 	return r.ApiService.InitiateCallExecute(r)
 }
 
 /*
-InitiateCall Initiate WhatsApp call
+InitiateCall Call action (connect / pre_accept / accept / reject / terminate)
 
-Outbound Calling API (beta). Requires Meta Calling enablement and product consent.
-Not production-complete — verify on stage before relying on this in production.
-Trial/subscription-limited channels are blocked.
+Perform a WhatsApp Calling action (beta).
+
+Proxies upstream `POST /calling/calls`. Despite the historical path
+name `/initiateCall`, this endpoint handles **all** call actions:
+
+| action | Use | Required |
+|--------|-----|----------|
+| `connect` | Outbound business → user | `to` + `session` (`sdp_type: offer`) |
+| `pre_accept` | Inbound (optional, reduces audio clipping) | `call_id` + `session` (`sdp_type: answer`) |
+| `accept` | Inbound answer | `call_id` + `session` (`sdp_type: answer`) |
+| `reject` | Decline inbound | `call_id` |
+| `terminate` | Hang up | `call_id` |
+
+**SDP / media (critical)**
+- `accept` / `pre_accept` require a **WebRTC-generated SDP answer**.
+- Do **not** send Meta's offer SDP back as the answer.
+- Postman (or curl) alone **cannot** establish real media — you need a
+  WebRTC or SIP stack. 1msg only proxies signaling.
+
+Answer within ~**30–60 seconds** of an inbound `connect` webhook or Meta
+terminates as unanswered. Common Meta errors include Calling not enabled
+(`138000`), no permission (`138006`), SDP validation failures.
+
+**Outbound** requires a prior Call Permission Request (CPR) acceptance.
+See the **Calling** tag overview for the full outbound flow and CPR limits.
+
+Trial / `subscriptionBlocked` → **403** plain text.
+Upstream failures often return HTTP 200 with `{ "response": { "error": "..." } }`.
 
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
@@ -211,13 +245,13 @@ func (a *CallingAPIService) InitiateCall(ctx context.Context) ApiInitiateCallReq
 }
 
 // Execute executes the request
-//  @return map[string]interface{}
-func (a *CallingAPIService) InitiateCallExecute(r ApiInitiateCallRequest) (map[string]interface{}, *http.Response, error) {
+//  @return InitiateCallResponse
+func (a *CallingAPIService) InitiateCallExecute(r ApiInitiateCallRequest) (*InitiateCallResponse, *http.Response, error) {
 	var (
 		localVarHTTPMethod   = http.MethodPost
 		localVarPostBody     interface{}
 		formFiles            []formFile
-		localVarReturnValue  map[string]interface{}
+		localVarReturnValue  *InitiateCallResponse
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CallingAPIService.InitiateCall")
@@ -232,6 +266,9 @@ func (a *CallingAPIService) InitiateCallExecute(r ApiInitiateCallRequest) (map[s
 	localVarFormParams := url.Values{}
 	if r.token == nil {
 		return localVarReturnValue, nil, reportError("token is required and must be specified")
+	}
+	if r.initiateCallRequest == nil {
+		return localVarReturnValue, nil, reportError("initiateCallRequest is required and must be specified")
 	}
 
 	parameterAddToHeaderOrQuery(localVarQueryParams, "token", r.token, "form", "")
@@ -253,7 +290,7 @@ func (a *CallingAPIService) InitiateCallExecute(r ApiInitiateCallRequest) (map[s
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
 	// body params
-	localVarPostBody = r.requestBody
+	localVarPostBody = r.initiateCallRequest
 	if r.ctx != nil {
 		// API Key Authentication
 		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
@@ -330,7 +367,7 @@ type ApiUpdateCallingSettingsRequest struct {
 	ctx context.Context
 	ApiService *CallingAPIService
 	token *string
-	requestBody *map[string]interface{}
+	callingSettings *CallingSettings
 }
 
 // JWT token or API key for authorization
@@ -339,20 +376,38 @@ func (r ApiUpdateCallingSettingsRequest) Token(token string) ApiUpdateCallingSet
 	return r
 }
 
-func (r ApiUpdateCallingSettingsRequest) RequestBody(requestBody map[string]interface{}) ApiUpdateCallingSettingsRequest {
-	r.requestBody = &requestBody
+func (r ApiUpdateCallingSettingsRequest) CallingSettings(callingSettings CallingSettings) ApiUpdateCallingSettingsRequest {
+	r.callingSettings = &callingSettings
 	return r
 }
 
-func (r ApiUpdateCallingSettingsRequest) Execute() (map[string]interface{}, *http.Response, error) {
+func (r ApiUpdateCallingSettingsRequest) Execute() (*UpdateCallingSettings200Response, *http.Response, error) {
 	return r.ApiService.UpdateCallingSettingsExecute(r)
 }
 
 /*
 UpdateCallingSettings Update calling settings
 
-Update WhatsApp Calling API settings (beta). Requires Meta Calling enablement.
-Trial/subscription-limited channels are blocked.
+Enable, disable, or update WhatsApp Calling settings (beta).
+
+Proxies upstream `POST /calling/settings`.
+Body is forwarded as-is (1msg does not validate fields).
+
+**Common fields under `calling`**
+- `status` (`ENABLED` | `DISABLED`) — required to turn calling on/off
+- `call_icon_visibility` (`DEFAULT` | `DISABLE_ALL`) — optional
+- `callback_permission_status` (`ENABLED` | `DISABLED`) — optional;
+  when enabled, inbound user calls grant callback permission
+- `call_hours` — optional hours / timezone object
+- `sip` — optional SIP trunk; when SIP is ENABLED, Graph call actions and
+  calling webhooks are not used
+- `srtp_key_exchange_protocol` (`DTLS` | `SDES`) — SDES only with SIP
+- `video.status` — optional
+
+Meta may accept only one feature group per request — prefer focused updates
+(e.g. enable status first, then SIP).
+
+Trial / `subscriptionBlocked` → **403** plain text.
 
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
@@ -366,13 +421,13 @@ func (a *CallingAPIService) UpdateCallingSettings(ctx context.Context) ApiUpdate
 }
 
 // Execute executes the request
-//  @return map[string]interface{}
-func (a *CallingAPIService) UpdateCallingSettingsExecute(r ApiUpdateCallingSettingsRequest) (map[string]interface{}, *http.Response, error) {
+//  @return UpdateCallingSettings200Response
+func (a *CallingAPIService) UpdateCallingSettingsExecute(r ApiUpdateCallingSettingsRequest) (*UpdateCallingSettings200Response, *http.Response, error) {
 	var (
 		localVarHTTPMethod   = http.MethodPost
 		localVarPostBody     interface{}
 		formFiles            []formFile
-		localVarReturnValue  map[string]interface{}
+		localVarReturnValue  *UpdateCallingSettings200Response
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "CallingAPIService.UpdateCallingSettings")
@@ -387,6 +442,9 @@ func (a *CallingAPIService) UpdateCallingSettingsExecute(r ApiUpdateCallingSetti
 	localVarFormParams := url.Values{}
 	if r.token == nil {
 		return localVarReturnValue, nil, reportError("token is required and must be specified")
+	}
+	if r.callingSettings == nil {
+		return localVarReturnValue, nil, reportError("callingSettings is required and must be specified")
 	}
 
 	parameterAddToHeaderOrQuery(localVarQueryParams, "token", r.token, "form", "")
@@ -408,7 +466,7 @@ func (a *CallingAPIService) UpdateCallingSettingsExecute(r ApiUpdateCallingSetti
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
 	// body params
-	localVarPostBody = r.requestBody
+	localVarPostBody = r.callingSettings
 	if r.ctx != nil {
 		// API Key Authentication
 		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {

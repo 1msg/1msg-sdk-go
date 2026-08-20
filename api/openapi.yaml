@@ -43,7 +43,43 @@ tags:
   name: Templates
 - description: Client webhook URL configuration
   name: Webhooks
-- description: WhatsApp Calling API (beta / feature-gated)
+- description: |
+    WhatsApp Calling API (beta) — VoIP **signaling** proxy.
+
+    1msg does **not** host media, store call history, or store recordings.
+    You need your own WebRTC or SIP stack.
+
+    ### Prerequisites
+    - Meta Calling enabled on the number (Cloud API; not COEX)
+    - Paid channel — trial / `subscriptionBlocked` → **403** plain text
+    - Webhook URL configured (`POST /webhook`) for `calls` events
+
+    ### Inbound (user → business)
+    1. Webhook `type=calls`, `event=connect` — take `call_id` + SDP **offer**
+    2. Optional: `POST /initiateCall` `action=pre_accept` + WebRTC **answer** SDP
+    3. `action=accept` + WebRTC **answer** SDP, or `action=reject`
+    4. Later `event=terminate`, or `action=terminate` to hang up
+
+    Answer within ~**30–60s** or Meta ends as unanswered.
+
+    **Critical:** `accept` / `pre_accept` need a **WebRTC-generated SDP answer**.
+    Do **not** echo Meta's offer. Postman/curl alone cannot establish real media.
+
+    ### Outbound (business → user)
+    1. Send Call Permission Request (CPR) — template or interactive
+    2. Wait for permission reply on the **messages** webhook (`call_permission_reply`)
+    3. `POST /initiateCall` `action=connect` + business SDP **offer**
+    4. Apply Meta's SDP **answer** from the `calls` connect webhook
+
+    Meta limits (summary): permission ~7 days; up to 5 calls / 24h / user;
+    max 2 CPR / 7 days; auto-revoke after 4 unanswered.
+
+    ### Webhooks (`type=calls`)
+    Passthrough of Meta `field=calls` plus `type`, `instanceId`.
+    Events: connect (offer or answer SDP), statuses (`RINGING` / `ACCEPTED` /
+    `REJECTED`), terminate. CPR replies use the messages path, not `type=calls`.
+
+    See operations below for request bodies and examples.
   name: Calling
 paths:
   /me:
@@ -1882,7 +1918,13 @@ paths:
       tags:
       - Webhooks
     post:
-      description: Configure the client webhook URL for inbound events.
+      description: |
+        Configure the client webhook URL for inbound events.
+
+        WhatsApp **Calling** events (`field=calls`) are forwarded as passthrough
+        payloads with `type: "calls"` and `instanceId` (connect / status / terminate).
+        Call permission replies arrive on the normal messages path
+        (`call_permission_reply`). Details: **Calling** tag.
       operationId: setWebhook
       parameters:
       - description: JWT token or API key for authorization
@@ -1924,8 +1966,17 @@ paths:
   /callingSettings:
     get:
       description: |
-        WhatsApp Calling API settings (beta). Requires Meta Calling enablement on the WABA.
-        Not production-complete — paths and webhook field names may change. Trial/subscription-limited channels are blocked.
+        Return WhatsApp Calling API settings for this channel (beta).
+
+        Proxies upstream `GET /calling/settings`.
+
+        **Prerequisites**
+        - Number must be eligible for Meta Calling (Cloud API; not COEX)
+        - Trial / `subscriptionBlocked` channels receive **403** plain text
+        - You need your own WebRTC or SIP stack; 1msg is a **signaling proxy** only
+          and does **not** store call history or recordings
+
+        See the **Calling** tag overview for inbound/outbound flows and webhooks.
       operationId: getCallingSettings
       parameters:
       - description: JWT token or API key for authorization
@@ -1940,10 +1991,17 @@ paths:
         "200":
           content:
             application/json:
+              example:
+                calling:
+                  status: ENABLED
+                  call_icon_visibility: DEFAULT
+                  callback_permission_status: ENABLED
+                  sip:
+                    status: DISABLED
               schema:
-                additionalProperties: true
-                type: object
-          description: Calling settings
+                $ref: "#/components/schemas/CallingSettings"
+          description: Calling settings (and possibly other Cloud API settings Meta
+            returns)
         "401":
           content:
             application/json:
@@ -1961,8 +2019,26 @@ paths:
       - Calling
     post:
       description: |
-        Update WhatsApp Calling API settings (beta). Requires Meta Calling enablement.
-        Trial/subscription-limited channels are blocked.
+        Enable, disable, or update WhatsApp Calling settings (beta).
+
+        Proxies upstream `POST /calling/settings`.
+        Body is forwarded as-is (1msg does not validate fields).
+
+        **Common fields under `calling`**
+        - `status` (`ENABLED` | `DISABLED`) — required to turn calling on/off
+        - `call_icon_visibility` (`DEFAULT` | `DISABLE_ALL`) — optional
+        - `callback_permission_status` (`ENABLED` | `DISABLED`) — optional;
+          when enabled, inbound user calls grant callback permission
+        - `call_hours` — optional hours / timezone object
+        - `sip` — optional SIP trunk; when SIP is ENABLED, Graph call actions and
+          calling webhooks are not used
+        - `srtp_key_exchange_protocol` (`DTLS` | `SDES`) — SDES only with SIP
+        - `video.status` — optional
+
+        Meta may accept only one feature group per request — prefer focused updates
+        (e.g. enable status first, then SIP).
+
+        Trial / `subscriptionBlocked` → **403** plain text.
       operationId: updateCallingSettings
       parameters:
       - description: JWT token or API key for authorization
@@ -1976,17 +2052,43 @@ paths:
       requestBody:
         content:
           application/json:
+            examples:
+              enable:
+                summary: Enable calling
+                value:
+                  calling:
+                    status: ENABLED
+                    call_icon_visibility: DEFAULT
+                    callback_permission_status: ENABLED
+              disable:
+                summary: Disable calling
+                value:
+                  calling:
+                    status: DISABLED
+              enableSip:
+                summary: Enable SIP (disables Graph call webhooks)
+                value:
+                  calling:
+                    status: ENABLED
+                    sip:
+                      status: ENABLED
+                      servers:
+                      - hostname: sip.example.com
+                        port: 5061
             schema:
-              additionalProperties: true
-              type: object
+              $ref: "#/components/schemas/CallingSettings"
+        required: true
       responses:
         "200":
           content:
             application/json:
+              example:
+                success: true
               schema:
-                additionalProperties: true
-                type: object
-          description: Updated
+                $ref: "#/components/schemas/updateCallingSettings_200_response"
+          description: |
+            Usually `{ "success": true }` from upstream, or legacy
+            `{ "result": "success" }` / `{ "response": { "error": "..." } }`.
         "401":
           content:
             application/json:
@@ -2005,9 +2107,34 @@ paths:
   /initiateCall:
     post:
       description: |
-        Outbound Calling API (beta). Requires Meta Calling enablement and product consent.
-        Not production-complete — verify on stage before relying on this in production.
-        Trial/subscription-limited channels are blocked.
+        Perform a WhatsApp Calling action (beta).
+
+        Proxies upstream `POST /calling/calls`. Despite the historical path
+        name `/initiateCall`, this endpoint handles **all** call actions:
+
+        | action | Use | Required |
+        |--------|-----|----------|
+        | `connect` | Outbound business → user | `to` + `session` (`sdp_type: offer`) |
+        | `pre_accept` | Inbound (optional, reduces audio clipping) | `call_id` + `session` (`sdp_type: answer`) |
+        | `accept` | Inbound answer | `call_id` + `session` (`sdp_type: answer`) |
+        | `reject` | Decline inbound | `call_id` |
+        | `terminate` | Hang up | `call_id` |
+
+        **SDP / media (critical)**
+        - `accept` / `pre_accept` require a **WebRTC-generated SDP answer**.
+        - Do **not** send Meta's offer SDP back as the answer.
+        - Postman (or curl) alone **cannot** establish real media — you need a
+          WebRTC or SIP stack. 1msg only proxies signaling.
+
+        Answer within ~**30–60 seconds** of an inbound `connect` webhook or Meta
+        terminates as unanswered. Common Meta errors include Calling not enabled
+        (`138000`), no permission (`138006`), SDP validation failures.
+
+        **Outbound** requires a prior Call Permission Request (CPR) acceptance.
+        See the **Calling** tag overview for the full outbound flow and CPR limits.
+
+        Trial / `subscriptionBlocked` → **403** plain text.
+        Upstream failures often return HTTP 200 with `{ "response": { "error": "..." } }`.
       operationId: initiateCall
       parameters:
       - description: JWT token or API key for authorization
@@ -2021,17 +2148,74 @@ paths:
       requestBody:
         content:
           application/json:
+            examples:
+              outboundConnect:
+                summary: Outbound connect (business SDP offer)
+                value:
+                  messaging_product: whatsapp
+                  to: "12185552828"
+                  action: connect
+                  biz_opaque_callback_data: order-123
+                  session:
+                    sdp_type: offer
+                    sdp: "[REPLACE_WITH_WEBRTC_SDP]"
+              preAccept:
+                summary: Inbound pre_accept (WebRTC answer SDP)
+                value:
+                  messaging_product: whatsapp
+                  call_id: wacid.ABGGFjFVU2AfAgo6V-Hc5eCgK5Gh
+                  action: pre_accept
+                  session:
+                    sdp_type: answer
+                    sdp: "[REPLACE_WITH_WEBRTC_SDP]"
+              accept:
+                summary: Inbound accept (WebRTC answer SDP)
+                value:
+                  messaging_product: whatsapp
+                  call_id: wacid.ABGGFjFVU2AfAgo6V-Hc5eCgK5Gh
+                  action: accept
+                  session:
+                    sdp_type: answer
+                    sdp: "[REPLACE_WITH_WEBRTC_SDP]"
+              reject:
+                summary: Reject inbound call
+                value:
+                  messaging_product: whatsapp
+                  call_id: wacid.ABGGFjFVU2AfAgo6V-Hc5eCgK5Gh
+                  action: reject
+              terminate:
+                summary: Terminate active call
+                value:
+                  messaging_product: whatsapp
+                  call_id: wacid.ABGGFjFVU2AfAgo6V-Hc5eCgK5Gh
+                  action: terminate
             schema:
-              additionalProperties: true
-              type: object
+              $ref: "#/components/schemas/InitiateCallRequest"
+        required: true
       responses:
         "200":
           content:
             application/json:
+              examples:
+                success:
+                  summary: Accept / pre_accept / reject / terminate success
+                  value:
+                    messaging_product: whatsapp
+                    success: true
+                connectSuccess:
+                  summary: Outbound connect success (includes call id)
+                  value:
+                    messaging_product: whatsapp
+                    calls:
+                    - id: wacid.HBgLMTIxODU1NTI4MjgVAgARGCAyODRQIAFRoA
+                upstreamError:
+                  summary: Upstream error wrapped by 1msg
+                  value:
+                    response:
+                      error: Calling not enabled
               schema:
-                additionalProperties: true
-                type: object
-          description: Call initiated
+                $ref: "#/components/schemas/InitiateCallResponse"
+          description: "Call action result from upstream, or legacy error wrapper"
         "401":
           content:
             application/json:
@@ -2044,7 +2228,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: Internal server error
-      summary: Initiate WhatsApp call
+      summary: Call action (connect / pre_accept / accept / reject / terminate)
       tags:
       - Calling
   /groups:
@@ -2975,6 +3159,157 @@ components:
           maxItems: 30
           type: array
       type: object
+    CallingSettings:
+      additionalProperties: true
+      description: |
+        Calling settings payload for GET/POST `/callingSettings`.
+        Proxies upstream `GET|POST /calling/settings`.
+        Extra Meta fields may appear on GET responses; document core fields below.
+      example:
+        calling:
+          call_hours:
+            timezone: America/Los_Angeles
+            day_of_week_start: MONDAY
+            status: ENABLED
+          ip_addresses:
+            key: ""
+          restrictions:
+            key: ""
+          sip:
+            servers:
+            - hostname: sip.example.com
+              password: password
+              port: 5061
+              sip_user_password: sip_user_password
+              app_id: app_id
+              request_uri_user_params:
+                key: request_uri_user_params
+            - hostname: sip.example.com
+              password: password
+              port: 5061
+              sip_user_password: sip_user_password
+              app_id: app_id
+              request_uri_user_params:
+                key: request_uri_user_params
+            status: DISABLED
+          video:
+            status: ENABLED
+          audio:
+            status: status
+          srtp_key_exchange_protocol: DTLS
+          call_icons:
+            key: ""
+          status: ENABLED
+          call_icon_visibility: DEFAULT
+          callback_permission_status: ENABLED
+      properties:
+        calling:
+          $ref: "#/components/schemas/CallingSettings_calling"
+      type: object
+    InitiateCallRequest:
+      additionalProperties: true
+      description: |
+        Call action payload for `POST /initiateCall` (proxies upstream `POST /calling/calls`).
+
+        Despite the path name, this endpoint handles **all** call actions — not only
+        outbound connect.
+
+        ## Required fields by `action`
+
+        | action | Required | `session` |
+        |--------|----------|-----------|
+        | `connect` (outbound) | `messaging_product`, `to`, `action` | `sdp_type: offer` + business WebRTC SDP |
+        | `pre_accept` | `messaging_product`, `call_id`, `action` | `sdp_type: answer` (WebRTC-generated) |
+        | `accept` | `messaging_product`, `call_id`, `action` | `sdp_type: answer` (WebRTC-generated) |
+        | `reject` | `messaging_product`, `call_id`, `action` | none |
+        | `terminate` | `messaging_product`, `call_id`, `action` | none |
+
+        **Critical:** For `pre_accept` / `accept`, `session.sdp` must be a
+        **WebRTC-generated SDP answer**. Do not echo Meta's offer SDP back.
+        Postman alone cannot establish real media — you need a WebRTC (or SIP) stack.
+      example:
+        biz_opaque_callback_data: order-123-callback
+        session:
+          sdp_type: offer
+          sdp: "[REPLACE_WITH_WEBRTC_SDP]"
+        messaging_product: whatsapp
+        action: connect
+        to: "12185552828"
+        call_id: wacid.ABGGFjFVU2AfAgo6V-Hc5eCgK5Gh
+      properties:
+        messaging_product:
+          description: Must be `whatsapp`
+          enum:
+          - whatsapp
+          example: whatsapp
+          type: string
+        action:
+          description: Call control action
+          enum:
+          - connect
+          - pre_accept
+          - accept
+          - reject
+          - terminate
+          example: connect
+          type: string
+        call_id:
+          description: |
+            WhatsApp call id from the inbound/outbound calls webhook (`calls[].id`).
+            Required for `pre_accept`, `accept`, `reject`, `terminate`.
+          example: wacid.ABGGFjFVU2AfAgo6V-Hc5eCgK5Gh
+          type: string
+        to:
+          description: |
+            Recipient WhatsApp user phone (digits, country code, no +).
+            Required for outbound `connect`.
+          example: "12185552828"
+          type: string
+        biz_opaque_callback_data:
+          description: Optional opaque string echoed on later call webhooks for correlation
+          example: order-123-callback
+          maxLength: 512
+          type: string
+        session:
+          $ref: "#/components/schemas/InitiateCallRequest_session"
+      required:
+      - action
+      - messaging_product
+      type: object
+    InitiateCallResponse:
+      additionalProperties: true
+      description: |
+        Successful call action response from upstream, returned as-is.
+        On empty upstream body, 1msg may return `{ "result": "success" }`.
+        Upstream failures are often wrapped as HTTP 200 `{ "response": { "error": "..." } }`.
+      example:
+        result: success
+        calls:
+        - id: wacid.HBgLMTIxODU1NTI4MjgVAgARGCAyODRQIAFRoA
+        - id: wacid.HBgLMTIxODU1NTI4MjgVAgARGCAyODRQIAFRoA
+        success: true
+        response:
+          error: error
+        messaging_product: whatsapp
+      properties:
+        messaging_product:
+          example: whatsapp
+          type: string
+        success:
+          example: true
+          type: boolean
+        calls:
+          description: Present on outbound `connect` — contains the new call id
+          items:
+            $ref: "#/components/schemas/InitiateCallResponse_calls_inner"
+          type: array
+        result:
+          description: Legacy success marker when upstream returns an empty body
+          example: success
+          type: string
+        response:
+          $ref: "#/components/schemas/InitiateCallResponse_response"
+      type: object
     SendMessageRequest:
       additionalProperties: false
       description: Request body for sending a text message
@@ -3846,6 +4181,31 @@ components:
         webhookUrl:
           type: string
       type: object
+    updateCallingSettings_200_response_response:
+      additionalProperties: true
+      example:
+        error: error
+      properties:
+        error:
+          type: string
+      type: object
+    updateCallingSettings_200_response:
+      additionalProperties: true
+      example:
+        result: success
+        success: true
+        response:
+          error: error
+      properties:
+        success:
+          example: true
+          type: boolean
+        result:
+          example: success
+          type: string
+        response:
+          $ref: "#/components/schemas/updateCallingSettings_200_response_response"
+      type: object
     createGroups_200_response:
       additionalProperties: true
       example:
@@ -4014,6 +4374,244 @@ components:
       required:
       - command_description
       - command_name
+      type: object
+    CallingSettings_calling_call_hours:
+      additionalProperties: true
+      description: Optional call hours / timezone configuration (Meta shape)
+      example:
+        timezone: America/Los_Angeles
+        day_of_week_start: MONDAY
+        status: ENABLED
+      properties:
+        status:
+          example: ENABLED
+          type: string
+        timezone:
+          example: America/Los_Angeles
+          type: string
+        day_of_week_start:
+          example: MONDAY
+          type: string
+      type: object
+    CallingSettings_calling_sip_servers_inner:
+      additionalProperties: true
+      example:
+        hostname: sip.example.com
+        password: password
+        port: 5061
+        sip_user_password: sip_user_password
+        app_id: app_id
+        request_uri_user_params:
+          key: request_uri_user_params
+      properties:
+        hostname:
+          example: sip.example.com
+          type: string
+        port:
+          example: 5061
+          type: integer
+        request_uri_user_params:
+          additionalProperties:
+            type: string
+          type: object
+        sip_user_password:
+          description: Present on GET when SIP credentials are returned by Meta
+          type: string
+        password:
+          description: Alternate password field name from some Meta responses
+          type: string
+        app_id:
+          type: string
+      type: object
+    CallingSettings_calling_sip:
+      additionalProperties: true
+      description: |
+        SIP trunk settings. When SIP is ENABLED, Graph call actions and
+        calling webhooks are not used — Meta dials your SIP server directly.
+      example:
+        servers:
+        - hostname: sip.example.com
+          password: password
+          port: 5061
+          sip_user_password: sip_user_password
+          app_id: app_id
+          request_uri_user_params:
+            key: request_uri_user_params
+        - hostname: sip.example.com
+          password: password
+          port: 5061
+          sip_user_password: sip_user_password
+          app_id: app_id
+          request_uri_user_params:
+            key: request_uri_user_params
+        status: DISABLED
+      properties:
+        status:
+          enum:
+          - ENABLED
+          - DISABLED
+          example: DISABLED
+          type: string
+        servers:
+          items:
+            $ref: "#/components/schemas/CallingSettings_calling_sip_servers_inner"
+          type: array
+      type: object
+    CallingSettings_calling_video:
+      additionalProperties: true
+      description: Video calling toggle when supported
+      example:
+        status: ENABLED
+      properties:
+        status:
+          enum:
+          - ENABLED
+          - DISABLED
+          type: string
+      type: object
+    CallingSettings_calling_audio:
+      additionalProperties: true
+      description: Audio settings (typically response-only)
+      example:
+        status: status
+      properties:
+        status:
+          type: string
+      type: object
+    CallingSettings_calling:
+      additionalProperties: true
+      description: Calling feature configuration for the business phone number
+      example:
+        call_hours:
+          timezone: America/Los_Angeles
+          day_of_week_start: MONDAY
+          status: ENABLED
+        ip_addresses:
+          key: ""
+        restrictions:
+          key: ""
+        sip:
+          servers:
+          - hostname: sip.example.com
+            password: password
+            port: 5061
+            sip_user_password: sip_user_password
+            app_id: app_id
+            request_uri_user_params:
+              key: request_uri_user_params
+          - hostname: sip.example.com
+            password: password
+            port: 5061
+            sip_user_password: sip_user_password
+            app_id: app_id
+            request_uri_user_params:
+              key: request_uri_user_params
+          status: DISABLED
+        video:
+          status: ENABLED
+        audio:
+          status: status
+        srtp_key_exchange_protocol: DTLS
+        call_icons:
+          key: ""
+        status: ENABLED
+        call_icon_visibility: DEFAULT
+        callback_permission_status: ENABLED
+      properties:
+        status:
+          description: Enable or disable Calling API on this number
+          enum:
+          - ENABLED
+          - DISABLED
+          example: ENABLED
+          type: string
+        call_icon_visibility:
+          description: Controls call icon visibility in the WhatsApp client
+          enum:
+          - DEFAULT
+          - DISABLE_ALL
+          example: DEFAULT
+          type: string
+        callback_permission_status:
+          description: |
+            When ENABLED, a user who calls your business automatically grants
+            call permission for business-initiated callbacks (subject to Meta rules).
+          enum:
+          - ENABLED
+          - DISABLED
+          example: ENABLED
+          type: string
+        srtp_key_exchange_protocol:
+          description: |
+            SRTP key exchange. DTLS is default/recommended.
+            SDES is only valid when SIP signaling is enabled.
+          enum:
+          - DTLS
+          - SDES
+          example: DTLS
+          type: string
+        call_hours:
+          $ref: "#/components/schemas/CallingSettings_calling_call_hours"
+        sip:
+          $ref: "#/components/schemas/CallingSettings_calling_sip"
+        video:
+          $ref: "#/components/schemas/CallingSettings_calling_video"
+        audio:
+          $ref: "#/components/schemas/CallingSettings_calling_audio"
+        restrictions:
+          additionalProperties: true
+          description: Calling restrictions (response-only)
+          type: object
+        ip_addresses:
+          additionalProperties: true
+          description: Meta media IP ranges (response-only)
+          type: object
+        call_icons:
+          additionalProperties: true
+          description: Call icon country restrictions (response-only)
+          type: object
+      type: object
+    InitiateCallRequest_session:
+      additionalProperties: true
+      description: WebRTC SDP session (required for connect / pre_accept / accept)
+      example:
+        sdp_type: offer
+        sdp: "[REPLACE_WITH_WEBRTC_SDP]"
+      properties:
+        sdp_type:
+          description: offer for outbound connect; answer for pre_accept/accept
+          enum:
+          - offer
+          - answer
+          example: offer
+          type: string
+        sdp:
+          description: |
+            Full SDP (RFC 8866). Replace placeholders with SDP from your WebRTC stack.
+            Must negotiate ICE, DTLS-SRTP, and OPUS for WhatsApp media.
+          example: "[REPLACE_WITH_WEBRTC_SDP]"
+          type: string
+      required:
+      - sdp
+      - sdp_type
+      type: object
+    InitiateCallResponse_calls_inner:
+      additionalProperties: true
+      example:
+        id: wacid.HBgLMTIxODU1NTI4MjgVAgARGCAyODRQIAFRoA
+      properties:
+        id:
+          example: wacid.HBgLMTIxODU1NTI4MjgVAgARGCAyODRQIAFRoA
+          type: string
+      type: object
+    InitiateCallResponse_response:
+      additionalProperties: true
+      description: Present when 1msg wraps an upstream error
+      example:
+        error: error
+      properties:
+        error:
+          type: string
       type: object
   securitySchemes:
     tokenAuth:
