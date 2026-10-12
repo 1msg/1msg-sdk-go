@@ -1,7 +1,7 @@
 /*
 1MSG WhatsApp Business API (Public)
 
-Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** All requests require `token` query parameter with JWT or API key.  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
+Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
 API version: 1.0.0
 Contact: support@1msg.io
@@ -22,6 +22,168 @@ import (
 
 // ChannelAPIService ChannelAPI service
 type ChannelAPIService service
+
+type ApiCreateSettingsRequest struct {
+	ctx context.Context
+	ApiService *ChannelAPIService
+	token *string
+	createSettingsRequest *CreateSettingsRequest
+}
+
+// JWT token or API key for authorization
+func (r ApiCreateSettingsRequest) Token(token string) ApiCreateSettingsRequest {
+	r.token = &token
+	return r
+}
+
+func (r ApiCreateSettingsRequest) CreateSettingsRequest(createSettingsRequest CreateSettingsRequest) ApiCreateSettingsRequest {
+	r.createSettingsRequest = &createSettingsRequest
+	return r
+}
+
+func (r ApiCreateSettingsRequest) Execute() (map[string]interface{}, *http.Response, error) {
+	return r.ApiService.CreateSettingsExecute(r)
+}
+
+/*
+CreateSettings Update channel settings
+
+Update channel settings. Only send fields you want to change.
+
+`webhookUrl` **replaces** the stored list (one URL string, or up to 5 URLs as an array).
+Passing an empty value clears webhooks. Repeating the same URL(s) also clears a
+sticky auto-disable. With several URLs, send the complete array to re-enable one
+of them — omitting a URL removes it from the channel.
+
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @return ApiCreateSettingsRequest
+*/
+func (a *ChannelAPIService) CreateSettings(ctx context.Context) ApiCreateSettingsRequest {
+	return ApiCreateSettingsRequest{
+		ApiService: a,
+		ctx: ctx,
+	}
+}
+
+// Execute executes the request
+//  @return map[string]interface{}
+func (a *ChannelAPIService) CreateSettingsExecute(r ApiCreateSettingsRequest) (map[string]interface{}, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodPost
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  map[string]interface{}
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "ChannelAPIService.CreateSettings")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/settings"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.token == nil {
+		return localVarReturnValue, nil, reportError("token is required and must be specified")
+	}
+	if r.createSettingsRequest == nil {
+		return localVarReturnValue, nil, reportError("createSettingsRequest is required and must be specified")
+	}
+
+	parameterAddToHeaderOrQuery(localVarQueryParams, "token", r.token, "form", "")
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.createSettingsRequest
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["tokenAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarQueryParams.Add("token", key)
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v ErrorResponse
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v ErrorResponse
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
 
 type ApiGetConversationalAutomationRequest struct {
 	ctx context.Context
@@ -189,14 +351,22 @@ func (r ApiGetStatusRequest) Token(token string) ApiGetStatusRequest {
 	return r
 }
 
-func (r ApiGetStatusRequest) Execute() (map[string]interface{}, *http.Response, error) {
+func (r ApiGetStatusRequest) Execute() (*GetStatus200Response, *http.Response, error) {
 	return r.ApiService.GetStatusExecute(r)
 }
 
 /*
 GetStatus Get channel status
 
-Returns WhatsApp Business API client connection status.
+Return WhatsApp Cloud API connection status for this channel (`connected`
+when the number can send). May include `accountStatus`, messaging limit,
+and MM Lite availability.
+
+Optional `health_status_warning` appears only when Meta Graph health could
+not be loaded and a soft `connected` response is returned. Omitted on the
+normal path and when health details are not applicable for the channel —
+never an internal provider/transport name.
+
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @return ApiGetStatusRequest
@@ -209,13 +379,13 @@ func (a *ChannelAPIService) GetStatus(ctx context.Context) ApiGetStatusRequest {
 }
 
 // Execute executes the request
-//  @return map[string]interface{}
-func (a *ChannelAPIService) GetStatusExecute(r ApiGetStatusRequest) (map[string]interface{}, *http.Response, error) {
+//  @return GetStatus200Response
+func (a *ChannelAPIService) GetStatusExecute(r ApiGetStatusRequest) (*GetStatus200Response, *http.Response, error) {
 	var (
 		localVarHTTPMethod   = http.MethodGet
 		localVarPostBody     interface{}
 		formFiles            []formFile
-		localVarReturnValue  map[string]interface{}
+		localVarReturnValue  *GetStatus200Response
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "ChannelAPIService.GetStatus")
@@ -224,6 +394,163 @@ func (a *ChannelAPIService) GetStatusExecute(r ApiGetStatusRequest) (map[string]
 	}
 
 	localVarPath := localBasePath + "/status"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.token == nil {
+		return localVarReturnValue, nil, reportError("token is required and must be specified")
+	}
+
+	parameterAddToHeaderOrQuery(localVarQueryParams, "token", r.token, "form", "")
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["tokenAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarQueryParams.Add("token", key)
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v ErrorResponse
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v ErrorResponse
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiListSettingsRequest struct {
+	ctx context.Context
+	ApiService *ChannelAPIService
+	token *string
+}
+
+// JWT token or API key for authorization
+func (r ApiListSettingsRequest) Token(token string) ApiListSettingsRequest {
+	r.token = &token
+	return r
+}
+
+func (r ApiListSettingsRequest) Execute() (*ListSettings200Response, *http.Response, error) {
+	return r.ApiService.ListSettingsExecute(r)
+}
+
+/*
+ListSettings Get channel settings
+
+Return channel settings: webhook URL(s), delivery flags, and analytics toggles.
+
+Auto-disable / circuit state matches `GET /webhook`. **Prefer `webhookStatuses`**
+(one row per configured URL). The breaker is per URL, not per channel.
+
+Channel-level `haveDisabledWebhooks` is `true` when **at least one** URL in
+`webhookUrl` is sticky auto-disabled — not "the channel is dead". Live URLs
+still receive events. Top-level `circuitState` / `reason` / `fails` / `trips`
+are a compatibility summary of one URL (first sticky-disabled, else first
+configured).
+
+This is the same `GET /settings` endpoint as the REST API (previously missing from MCP).
+
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @return ApiListSettingsRequest
+*/
+func (a *ChannelAPIService) ListSettings(ctx context.Context) ApiListSettingsRequest {
+	return ApiListSettingsRequest{
+		ApiService: a,
+		ctx: ctx,
+	}
+}
+
+// Execute executes the request
+//  @return ListSettings200Response
+func (a *ChannelAPIService) ListSettingsExecute(r ApiListSettingsRequest) (*ListSettings200Response, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodGet
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *ListSettings200Response
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "ChannelAPIService.ListSettings")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/settings"
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}

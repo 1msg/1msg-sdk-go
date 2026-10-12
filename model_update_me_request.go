@@ -1,7 +1,7 @@
 /*
 1MSG WhatsApp Business API (Public)
 
-Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** All requests require `token` query parameter with JWT or API key.  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
+Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
 API version: 1.0.0
 Contact: support@1msg.io
@@ -20,16 +20,19 @@ var _ MappedNullable = &UpdateMeRequest{}
 
 // UpdateMeRequest struct for UpdateMeRequest
 type UpdateMeRequest struct {
-	// Profile About section
+	// Profile About section (WhatsApp status text)
 	About *string `json:"about,omitempty"`
+	// Business address shown on the profile
 	Address *string `json:"address,omitempty"`
 	// Business description (max 256 characters)
 	Description *string `json:"description,omitempty"`
+	// Business email shown on the profile
 	Email *string `json:"email,omitempty"`
 	// Industry of the business
 	Vertical *string `json:"vertical,omitempty"`
 	// HTTPS URL or data:image/...;base64,... payload
 	Photo *string `json:"photo,omitempty"`
+	// Business website URLs
 	Websites []string `json:"websites,omitempty"`
 	AdditionalProperties map[string]interface{}
 }

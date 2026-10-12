@@ -1,7 +1,7 @@
 /*
 1MSG WhatsApp Business API (Public)
 
-Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** All requests require `token` query parameter with JWT or API key.  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
+Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
 API version: 1.0.0
 Contact: support@1msg.io
@@ -20,11 +20,19 @@ var _ MappedNullable = &SendTemplateRequest{}
 
 // SendTemplateRequest struct for SendTemplateRequest
 type SendTemplateRequest struct {
+	// Approved template name (template `name`, not the old HSM `element_name`)
 	Template *string `json:"template,omitempty"`
 	Language *SendTemplateRequestLanguage `json:"language,omitempty"`
+	// Template namespace from `list_templates`
 	Namespace *string `json:"namespace,omitempty"`
-	Params []interface{} `json:"params,omitempty"`
+	// Template components in WhatsApp Cloud API format. Each item is an object with `type` (`body`, `header`, `button`) and `parameters` (objects with `type` + `text` / media / action). Never a list of strings. Never HSM `localizable_params`. 
+	Params []map[string]interface{} `json:"params,omitempty"`
+	// Recipient phone with country code (use phone or chatId)
 	Phone *string `json:"phone,omitempty"`
+	// Recipient chat ID (`phone@c.us`, group `@g.us`, or BSUID `@lid`). Use phone or chatId.
+	ChatId *string `json:"chatId,omitempty"`
+	// Optional Cloud API wamid to quote
+	QuotedMsgId *string `json:"quotedMsgId,omitempty"`
 	// Force Marketing Messages API (POST marketing_messages). If omitted: auto for MARKETING category when channel has mm_lite_enabled and mm_lite_available service settings. 
 	UseMMlite *bool `json:"useMMlite,omitempty"`
 	// Sets message_activity_sharing on WABA payload. Enables click tracking webhooks. Requires MM Lite path. Ignored on Cloud API fallback. 
@@ -147,9 +155,9 @@ func (o *SendTemplateRequest) SetNamespace(v string) {
 }
 
 // GetParams returns the Params field value if set, zero value otherwise.
-func (o *SendTemplateRequest) GetParams() []interface{} {
+func (o *SendTemplateRequest) GetParams() []map[string]interface{} {
 	if o == nil || IsNil(o.Params) {
-		var ret []interface{}
+		var ret []map[string]interface{}
 		return ret
 	}
 	return o.Params
@@ -157,7 +165,7 @@ func (o *SendTemplateRequest) GetParams() []interface{} {
 
 // GetParamsOk returns a tuple with the Params field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *SendTemplateRequest) GetParamsOk() ([]interface{}, bool) {
+func (o *SendTemplateRequest) GetParamsOk() ([]map[string]interface{}, bool) {
 	if o == nil || IsNil(o.Params) {
 		return nil, false
 	}
@@ -173,8 +181,8 @@ func (o *SendTemplateRequest) HasParams() bool {
 	return false
 }
 
-// SetParams gets a reference to the given []interface{} and assigns it to the Params field.
-func (o *SendTemplateRequest) SetParams(v []interface{}) {
+// SetParams gets a reference to the given []map[string]interface{} and assigns it to the Params field.
+func (o *SendTemplateRequest) SetParams(v []map[string]interface{}) {
 	o.Params = v
 }
 
@@ -208,6 +216,70 @@ func (o *SendTemplateRequest) HasPhone() bool {
 // SetPhone gets a reference to the given string and assigns it to the Phone field.
 func (o *SendTemplateRequest) SetPhone(v string) {
 	o.Phone = &v
+}
+
+// GetChatId returns the ChatId field value if set, zero value otherwise.
+func (o *SendTemplateRequest) GetChatId() string {
+	if o == nil || IsNil(o.ChatId) {
+		var ret string
+		return ret
+	}
+	return *o.ChatId
+}
+
+// GetChatIdOk returns a tuple with the ChatId field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *SendTemplateRequest) GetChatIdOk() (*string, bool) {
+	if o == nil || IsNil(o.ChatId) {
+		return nil, false
+	}
+	return o.ChatId, true
+}
+
+// HasChatId returns a boolean if a field has been set.
+func (o *SendTemplateRequest) HasChatId() bool {
+	if o != nil && !IsNil(o.ChatId) {
+		return true
+	}
+
+	return false
+}
+
+// SetChatId gets a reference to the given string and assigns it to the ChatId field.
+func (o *SendTemplateRequest) SetChatId(v string) {
+	o.ChatId = &v
+}
+
+// GetQuotedMsgId returns the QuotedMsgId field value if set, zero value otherwise.
+func (o *SendTemplateRequest) GetQuotedMsgId() string {
+	if o == nil || IsNil(o.QuotedMsgId) {
+		var ret string
+		return ret
+	}
+	return *o.QuotedMsgId
+}
+
+// GetQuotedMsgIdOk returns a tuple with the QuotedMsgId field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *SendTemplateRequest) GetQuotedMsgIdOk() (*string, bool) {
+	if o == nil || IsNil(o.QuotedMsgId) {
+		return nil, false
+	}
+	return o.QuotedMsgId, true
+}
+
+// HasQuotedMsgId returns a boolean if a field has been set.
+func (o *SendTemplateRequest) HasQuotedMsgId() bool {
+	if o != nil && !IsNil(o.QuotedMsgId) {
+		return true
+	}
+
+	return false
+}
+
+// SetQuotedMsgId gets a reference to the given string and assigns it to the QuotedMsgId field.
+func (o *SendTemplateRequest) SetQuotedMsgId(v string) {
+	o.QuotedMsgId = &v
 }
 
 // GetUseMMlite returns the UseMMlite field value if set, zero value otherwise.
@@ -330,6 +402,12 @@ func (o SendTemplateRequest) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.Phone) {
 		toSerialize["phone"] = o.Phone
+	}
+	if !IsNil(o.ChatId) {
+		toSerialize["chatId"] = o.ChatId
+	}
+	if !IsNil(o.QuotedMsgId) {
+		toSerialize["quotedMsgId"] = o.QuotedMsgId
 	}
 	if !IsNil(o.UseMMlite) {
 		toSerialize["useMMlite"] = o.UseMMlite

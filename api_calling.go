@@ -1,7 +1,7 @@
 /*
 1MSG WhatsApp Business API (Public)
 
-Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** All requests require `token` query parameter with JWT or API key.  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
+Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
 API version: 1.0.0
 Contact: support@1msg.io
@@ -231,7 +231,10 @@ terminates as unanswered. Common Meta errors include Calling not enabled
 See the **Calling** tag overview for the full outbound flow and CPR limits.
 
 Trial / `subscriptionBlocked` → **403** plain text.
-Upstream failures often return HTTP 200 with `{ "response": { "error": "..." } }`.
+Upstream failures often return HTTP 200 with `{ "response": { "error": "<upstream message>" } }`.
+`Invalid API KEY` is used only when Meta/360 body actually indicates an
+invalid API key or token. Other upstream 401s (notably call permission
+`138006`) pass through `error.message` / `error_user_msg`.
 
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().

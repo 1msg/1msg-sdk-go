@@ -1,7 +1,7 @@
 /*
 1MSG WhatsApp Business API (Public)
 
-Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** All requests require `token` query parameter with JWT or API key.  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
+Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
 API version: 1.0.0
 Contact: support@1msg.io
@@ -188,7 +188,7 @@ type ApiCreateUploadMediaRequest struct {
 	ctx context.Context
 	ApiService *MessagingAPIService
 	token *string
-	requestBody *map[string]interface{}
+	createUploadMediaRequest *CreateUploadMediaRequest
 }
 
 // JWT token or API key for authorization
@@ -197,17 +197,24 @@ func (r ApiCreateUploadMediaRequest) Token(token string) ApiCreateUploadMediaReq
 	return r
 }
 
-func (r ApiCreateUploadMediaRequest) RequestBody(requestBody map[string]interface{}) ApiCreateUploadMediaRequest {
-	r.requestBody = &requestBody
+func (r ApiCreateUploadMediaRequest) CreateUploadMediaRequest(createUploadMediaRequest CreateUploadMediaRequest) ApiCreateUploadMediaRequest {
+	r.createUploadMediaRequest = &createUploadMediaRequest
 	return r
 }
 
-func (r ApiCreateUploadMediaRequest) Execute() (*http.Response, error) {
+func (r ApiCreateUploadMediaRequest) Execute() (*CreateUploadMedia200Response, *http.Response, error) {
 	return r.ApiService.CreateUploadMediaExecute(r)
 }
 
 /*
 CreateUploadMedia Upload media
+
+Upload a file to WhatsApp media storage and get a numeric `mediaId`
+for later use with `send_file` / `send_sticker` (`mediaId` field, not `body`).
+
+Pass the file as `body` **or** `url` — an HTTP(S) URL or a base64 data URI.
+The `mediaId` in the response is a numeric string (keep it as a string).
+
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @return ApiCreateUploadMediaRequest
@@ -220,16 +227,18 @@ func (a *MessagingAPIService) CreateUploadMedia(ctx context.Context) ApiCreateUp
 }
 
 // Execute executes the request
-func (a *MessagingAPIService) CreateUploadMediaExecute(r ApiCreateUploadMediaRequest) (*http.Response, error) {
+//  @return CreateUploadMedia200Response
+func (a *MessagingAPIService) CreateUploadMediaExecute(r ApiCreateUploadMediaRequest) (*CreateUploadMedia200Response, *http.Response, error) {
 	var (
 		localVarHTTPMethod   = http.MethodPost
 		localVarPostBody     interface{}
 		formFiles            []formFile
+		localVarReturnValue  *CreateUploadMedia200Response
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "MessagingAPIService.CreateUploadMedia")
 	if err != nil {
-		return nil, &GenericOpenAPIError{error: err.Error()}
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
 	localVarPath := localBasePath + "/uploadMedia"
@@ -238,7 +247,10 @@ func (a *MessagingAPIService) CreateUploadMediaExecute(r ApiCreateUploadMediaReq
 	localVarQueryParams := url.Values{}
 	localVarFormParams := url.Values{}
 	if r.token == nil {
-		return nil, reportError("token is required and must be specified")
+		return localVarReturnValue, nil, reportError("token is required and must be specified")
+	}
+	if r.createUploadMediaRequest == nil {
+		return localVarReturnValue, nil, reportError("createUploadMediaRequest is required and must be specified")
 	}
 
 	parameterAddToHeaderOrQuery(localVarQueryParams, "token", r.token, "form", "")
@@ -252,7 +264,7 @@ func (a *MessagingAPIService) CreateUploadMediaExecute(r ApiCreateUploadMediaReq
 	}
 
 	// to determine the Accept header
-	localVarHTTPHeaderAccepts := []string{}
+	localVarHTTPHeaderAccepts := []string{"application/json"}
 
 	// set Accept header
 	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
@@ -260,7 +272,7 @@ func (a *MessagingAPIService) CreateUploadMediaExecute(r ApiCreateUploadMediaReq
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
 	// body params
-	localVarPostBody = r.requestBody
+	localVarPostBody = r.createUploadMediaRequest
 	if r.ctx != nil {
 		// API Key Authentication
 		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
@@ -277,19 +289,19 @@ func (a *MessagingAPIService) CreateUploadMediaExecute(r ApiCreateUploadMediaReq
 	}
 	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
 	if err != nil {
-		return nil, err
+		return localVarReturnValue, nil, err
 	}
 
 	localVarHTTPResponse, err := a.client.callAPI(req)
 	if err != nil || localVarHTTPResponse == nil {
-		return localVarHTTPResponse, err
+		return localVarReturnValue, localVarHTTPResponse, err
 	}
 
 	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
 	localVarHTTPResponse.Body.Close()
 	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
 	if err != nil {
-		return localVarHTTPResponse, err
+		return localVarReturnValue, localVarHTTPResponse, err
 	}
 
 	if localVarHTTPResponse.StatusCode >= 300 {
@@ -297,10 +309,19 @@ func (a *MessagingAPIService) CreateUploadMediaExecute(r ApiCreateUploadMediaReq
 			body:  localVarBody,
 			error: localVarHTTPResponse.Status,
 		}
-		return localVarHTTPResponse, newErr
+		return localVarReturnValue, localVarHTTPResponse, newErr
 	}
 
-	return localVarHTTPResponse, nil
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
 type ApiDeleteMediaRequest struct {
@@ -790,11 +811,65 @@ type ApiListMessagesRequest struct {
 	ctx context.Context
 	ApiService *MessagingAPIService
 	token *string
+	chatId *string
+	limit *int32
+	last *bool
+	lastMessageNumber *int32
+	firstMessageNumber *int32
+	minTime *int32
+	maxTime *int32
+	msgId *string
 }
 
 // JWT token or API key for authorization
 func (r ApiListMessagesRequest) Token(token string) ApiListMessagesRequest {
 	r.token = &token
+	return r
+}
+
+// Filter messages for one chat (&#x60;phone@c.us&#x60;, group &#x60;@g.us&#x60;, or BSUID &#x60;@lid&#x60;)
+func (r ApiListMessagesRequest) ChatId(chatId string) ApiListMessagesRequest {
+	r.chatId = &chatId
+	return r
+}
+
+// Max rows to return (default 100)
+func (r ApiListMessagesRequest) Limit(limit int32) ApiListMessagesRequest {
+	r.limit = &limit
+	return r
+}
+
+// If true, return the latest messages (DESC). Default false.
+func (r ApiListMessagesRequest) Last(last bool) ApiListMessagesRequest {
+	r.last = &last
+	return r
+}
+
+func (r ApiListMessagesRequest) LastMessageNumber(lastMessageNumber int32) ApiListMessagesRequest {
+	r.lastMessageNumber = &lastMessageNumber
+	return r
+}
+
+func (r ApiListMessagesRequest) FirstMessageNumber(firstMessageNumber int32) ApiListMessagesRequest {
+	r.firstMessageNumber = &firstMessageNumber
+	return r
+}
+
+// Unix timestamp lower bound
+func (r ApiListMessagesRequest) MinTime(minTime int32) ApiListMessagesRequest {
+	r.minTime = &minTime
+	return r
+}
+
+// Unix timestamp upper bound
+func (r ApiListMessagesRequest) MaxTime(maxTime int32) ApiListMessagesRequest {
+	r.maxTime = &maxTime
+	return r
+}
+
+// Filter by stored message id
+func (r ApiListMessagesRequest) MsgId(msgId string) ApiListMessagesRequest {
+	r.msgId = &msgId
 	return r
 }
 
@@ -804,6 +879,10 @@ func (r ApiListMessagesRequest) Execute() (*ListMessages200Response, *http.Respo
 
 /*
 ListMessages Get messages list
+
+List stored chat history for this channel (requires history storage).
+Filter with `chatId`, `limit`, `last`, message numbers, or time bounds.
+
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @return ApiListMessagesRequest
@@ -840,6 +919,30 @@ func (a *MessagingAPIService) ListMessagesExecute(r ApiListMessagesRequest) (*Li
 	}
 
 	parameterAddToHeaderOrQuery(localVarQueryParams, "token", r.token, "form", "")
+	if r.chatId != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "chatId", r.chatId, "form", "")
+	}
+	if r.limit != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "limit", r.limit, "form", "")
+	}
+	if r.last != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "last", r.last, "form", "")
+	}
+	if r.lastMessageNumber != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "lastMessageNumber", r.lastMessageNumber, "form", "")
+	}
+	if r.firstMessageNumber != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "firstMessageNumber", r.firstMessageNumber, "form", "")
+	}
+	if r.minTime != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "min_time", r.minTime, "form", "")
+	}
+	if r.maxTime != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "max_time", r.maxTime, "form", "")
+	}
+	if r.msgId != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "msgId", r.msgId, "form", "")
+	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
 
@@ -1442,8 +1545,9 @@ type ApiSendCarouselRequest struct {
 	ctx context.Context
 	ApiService *MessagingAPIService
 	token *string
-	params *[]map[string]interface{}
 	body *string
+	cards *[]map[string]interface{}
+	params *[]map[string]interface{}
 	quotedMsgId *string
 	chatId *string
 	phone *int32
@@ -1455,15 +1559,21 @@ func (r ApiSendCarouselRequest) Token(token string) ApiSendCarouselRequest {
 	return r
 }
 
-// Required. Template-like structure (same as sendTemplate params). Must include a CAROUSEL component and its cards.  Structure: - params[] item with type CAROUSEL and cards (2..10) - cards[] item:   - components[] items:     - header: parameters[0] with type image/video/product       - image: {\\\&quot;image\\\&quot;: {\\\&quot;link\\\&quot;: \\\&quot;https://...\\\&quot;}}       - video: {\\\&quot;video\\\&quot;: {\\\&quot;link\\\&quot;: \\\&quot;https://...\\\&quot;}}       - product: {\\\&quot;product\\\&quot;: {\\\&quot;catalog_id\\\&quot;: \\\&quot;...\\\&quot;, \\\&quot;product_retailer_id\\\&quot;: \\\&quot;...\\\&quot;}}     - button: sub_type url or quick_reply       - url: parameters {\\\&quot;text\\\&quot;: \\\&quot;Button\\\&quot;, \\\&quot;url\\\&quot;: \\\&quot;https://...\\\&quot;}       - quick_reply: parameters[] of {\\\&quot;id\\\&quot;: \\\&quot;...\\\&quot;, \\\&quot;text\\\&quot;: \\\&quot;...\\\&quot;} 
-func (r ApiSendCarouselRequest) Params(params []map[string]interface{}) ApiSendCarouselRequest {
-	r.params = &params
-	return r
-}
-
 // Text shown above the carousel. Optional. If omitted and params include a body component, the body will be taken from params.
 func (r ApiSendCarouselRequest) Body(body string) ApiSendCarouselRequest {
 	r.body = &body
+	return r
+}
+
+// Preferred. 2–10 carousel cards (header + body + CTA or quick replies).
+func (r ApiSendCarouselRequest) Cards(cards []map[string]interface{}) ApiSendCarouselRequest {
+	r.cards = &cards
+	return r
+}
+
+// Required. Template-like structure (same as sendTemplate params). Must include a CAROUSEL component and its cards.  Structure: - params[] item with type CAROUSEL and cards (2..10) - cards[] item:   - components[] items:     - header: parameters[0] with type image/video/product       - image: {\\\&quot;image\\\&quot;: {\\\&quot;link\\\&quot;: \\\&quot;https://...\\\&quot;}}       - video: {\\\&quot;video\\\&quot;: {\\\&quot;link\\\&quot;: \\\&quot;https://...\\\&quot;}}       - product: {\\\&quot;product\\\&quot;: {\\\&quot;catalog_id\\\&quot;: \\\&quot;...\\\&quot;, \\\&quot;product_retailer_id\\\&quot;: \\\&quot;...\\\&quot;}}     - button: sub_type url or quick_reply       - url: parameters {\\\&quot;text\\\&quot;: \\\&quot;Button\\\&quot;, \\\&quot;url\\\&quot;: \\\&quot;https://...\\\&quot;}       - quick_reply: parameters[] of {\\\&quot;id\\\&quot;: \\\&quot;...\\\&quot;, \\\&quot;text\\\&quot;: \\\&quot;...\\\&quot;} 
+func (r ApiSendCarouselRequest) Params(params []map[string]interface{}) ApiSendCarouselRequest {
+	r.params = &params
 	return r
 }
 
@@ -1502,7 +1612,33 @@ The message structure in /sendCarousel is largely similar to sending a template.
 explicitly specify all elements that are created in advance when working with templates. This is because the message 
 is sent without using a template.
 
-In /sendCarousel, for sending a Catalog Carousel there can be either 1 URL button or one or more quick reply buttons.
+In /sendCarousel, for a Catalog Carousel there can be either 1 URL button or one or more quick reply buttons.
+
+Prefer the simple `cards` array (2–10 cards). Each card needs a header media/product
+plus a CTA URL or quick-reply buttons. Example:
+
+```json
+{
+  "phone": "79001234567",
+  "body": "Pick a product",
+  "cards": [
+    {
+      "header": { "type": "image", "image": { "link": "https://example.com/1.jpg" } },
+      "body": { "text": "Card one" },
+      "type": "cta_url",
+      "action": { "name": "cta_url", "parameters": { "url": "https://example.com/p1", "display_text": "Open" } }
+    },
+    {
+      "header": { "type": "image", "image": { "link": "https://example.com/2.jpg" } },
+      "body": { "text": "Card two" },
+      "type": "cta_url",
+      "action": { "name": "cta_url", "parameters": { "url": "https://example.com/p2", "display_text": "Open" } }
+    }
+  ]
+}
+```
+
+`params` with a `CAROUSEL` component is the template-like alternative.
 
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
@@ -1538,9 +1674,6 @@ func (a *MessagingAPIService) SendCarouselExecute(r ApiSendCarouselRequest) (*Me
 	if r.token == nil {
 		return localVarReturnValue, nil, reportError("token is required and must be specified")
 	}
-	if r.params == nil {
-		return localVarReturnValue, nil, reportError("params is required and must be specified")
-	}
 
 	parameterAddToHeaderOrQuery(localVarQueryParams, "token", r.token, "form", "")
 	// to determine the Content-Type header
@@ -1563,7 +1696,12 @@ func (a *MessagingAPIService) SendCarouselExecute(r ApiSendCarouselRequest) (*Me
 	if r.body != nil {
 		parameterAddToHeaderOrQuery(localVarFormParams, "body", r.body, "", "")
 	}
-	parameterAddToHeaderOrQuery(localVarFormParams, "params", r.params, "", "csv")
+	if r.cards != nil {
+		parameterAddToHeaderOrQuery(localVarFormParams, "cards", r.cards, "", "csv")
+	}
+	if r.params != nil {
+		parameterAddToHeaderOrQuery(localVarFormParams, "params", r.params, "", "csv")
+	}
 	if r.quotedMsgId != nil {
 		parameterAddToHeaderOrQuery(localVarFormParams, "quotedMsgId", r.quotedMsgId, "", "")
 	}
@@ -1691,6 +1829,21 @@ func (r ApiSendContactRequest) Execute() (*MessageSentResponse, *http.Response, 
 
 /*
 SendContact Send a Contact
+
+Send a WhatsApp contact card.
+
+Preferred simple body (legacy-compatible):
+
+```json
+{
+  "phone": "79001234567",
+  "contact": { "name": "Lida", "phone": "+79181976551" }
+}
+```
+
+Cloud API shape also works: `contacts` is an array of objects with
+`name.formatted_name` and `phones[].phone` (E.164 string, **not** a timestamp).
+
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @return ApiSendContactRequest
@@ -3217,7 +3370,7 @@ func (r ApiSendMessageRequest) QuotedMsgId(quotedMsgId string) ApiSendMessageReq
 	return r
 }
 
-// Chat ID in format: phone@c.us (individual) or phone@g.us (group)
+// Recipient chat ID: phone@c.us, group@g.us, or BSUID@lid
 func (r ApiSendMessageRequest) ChatId(chatId string) ApiSendMessageRequest {
 	r.chatId = &chatId
 	return r
@@ -3783,7 +3936,7 @@ type ApiSendProductRequest struct {
 	ctx context.Context
 	ApiService *MessagingAPIService
 	token *string
-	requestBody *map[string]interface{}
+	sendProductRequest *SendProductRequest
 }
 
 // JWT token or API key for authorization
@@ -3792,8 +3945,8 @@ func (r ApiSendProductRequest) Token(token string) ApiSendProductRequest {
 	return r
 }
 
-func (r ApiSendProductRequest) RequestBody(requestBody map[string]interface{}) ApiSendProductRequest {
-	r.requestBody = &requestBody
+func (r ApiSendProductRequest) SendProductRequest(sendProductRequest SendProductRequest) ApiSendProductRequest {
+	r.sendProductRequest = &sendProductRequest
 	return r
 }
 
@@ -3803,6 +3956,12 @@ func (r ApiSendProductRequest) Execute() (*MessageSentResponse, *http.Response, 
 
 /*
 SendProduct Send a Product
+
+Send a single catalog product or a product list.
+Destination is `chatId` or `phone`. `action` is required:
+- single product: `{ "catalog_id": "...", "product_retailer_id": "..." }`
+- product list: `{ "catalog_id": "...", "sections": [{ "title": "...", "product_items": [{ "product_retailer_id": "..." }] }] }`
+
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @return ApiSendProductRequest
@@ -3837,6 +3996,9 @@ func (a *MessagingAPIService) SendProductExecute(r ApiSendProductRequest) (*Mess
 	if r.token == nil {
 		return localVarReturnValue, nil, reportError("token is required and must be specified")
 	}
+	if r.sendProductRequest == nil {
+		return localVarReturnValue, nil, reportError("sendProductRequest is required and must be specified")
+	}
 
 	parameterAddToHeaderOrQuery(localVarQueryParams, "token", r.token, "form", "")
 	// to determine the Content-Type header
@@ -3857,7 +4019,7 @@ func (a *MessagingAPIService) SendProductExecute(r ApiSendProductRequest) (*Mess
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
 	// body params
-	localVarPostBody = r.requestBody
+	localVarPostBody = r.sendProductRequest
 	if r.ctx != nil {
 		// API Key Authentication
 		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
