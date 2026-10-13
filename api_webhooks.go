@@ -1,7 +1,7 @@
 /*
 1MSG WhatsApp Business API (Public)
 
-Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** All requests require `token` query parameter with JWT or API key.  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
+Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
 API version: 1.0.0
 Contact: support@1msg.io
@@ -42,7 +42,39 @@ func (r ApiGetWebhookRequest) Execute() (*GetWebhook200Response, *http.Response,
 /*
 GetWebhook Get webhook URL
 
-Returns the configured client webhook URL for this channel.
+Return the webhook URL(s) currently configured for this channel, plus delivery
+status for each URL.
+
+`webhookUrl` is a string when a single URL is set, an array of strings when
+multiple URLs are configured, or `null` if none is set.
+
+**Prefer `webhookStatuses`.** The circuit breaker is per URL, not per channel.
+If 1 of 4 URLs is sticky-disabled, that URL is skipped; the other three still
+receive events. Send/receive are not affected.
+
+Channel-level `haveDisabledWebhooks`, `circuitState`, `reason`, `fails`,
+`trips`, and timestamps are a compatibility summary of **one** URL (the first
+sticky-disabled URL, else the first configured URL). They are not "the channel
+is dead".
+
+- `haveDisabledWebhooks` — `true` when **at least one** URL in `webhookUrl` is
+  sticky auto-disabled. Live URLs still get events.
+- `circuitState` — compressed scalar for that same primary URL:
+  `ok` | `degraded` | `open` | `half_open` | `disabled`.
+- `disabledWebhooks` — currently configured URLs that are sticky-disabled
+  (subset of `webhookUrl`).
+- `webhookStatuses` — one row per currently configured URL. Use this array
+  to see which endpoints are live vs skipped.
+- `fails` / `trips` / `firstFailAt` — **diagnostics for support**, not product
+  UI. `fails` = failures in a rolling ~10 minute window (not lifetime).
+  `trips` = failed recovery probes on the 15 min → 1 h → 6 h schedule (sticky
+  disable after 3). Clients can ignore these and use `webhookStatuses` +
+  `disabledWebhooks` only.
+
+Sticky disable skips delivery; it does not unconfigure the URL (it stays in
+`webhookUrl`). Re-enable with `POST /webhook` or `POST /settings`. Those
+endpoints **replace** the whole list — with multiple URLs, send the full array.
+
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @return ApiGetWebhookRequest
@@ -172,7 +204,7 @@ type ApiSetWebhookRequest struct {
 	ctx context.Context
 	ApiService *WebhooksAPIService
 	token *string
-	getWebhook200Response *GetWebhook200Response
+	setWebhookRequest *SetWebhookRequest
 }
 
 // JWT token or API key for authorization
@@ -181,24 +213,33 @@ func (r ApiSetWebhookRequest) Token(token string) ApiSetWebhookRequest {
 	return r
 }
 
-func (r ApiSetWebhookRequest) GetWebhook200Response(getWebhook200Response GetWebhook200Response) ApiSetWebhookRequest {
-	r.getWebhook200Response = &getWebhook200Response
+func (r ApiSetWebhookRequest) SetWebhookRequest(setWebhookRequest SetWebhookRequest) ApiSetWebhookRequest {
+	r.setWebhookRequest = &setWebhookRequest
 	return r
 }
 
-func (r ApiSetWebhookRequest) Execute() (map[string]interface{}, *http.Response, error) {
+func (r ApiSetWebhookRequest) Execute() (*SetWebhook200Response, *http.Response, error) {
 	return r.ApiService.SetWebhookExecute(r)
 }
 
 /*
 SetWebhook Set webhook URL
 
-Configure the client webhook URL for inbound events.
+Set the client webhook URL that receives inbound events for this channel.
 
-WhatsApp **Calling** events (`field=calls`) are forwarded as passthrough
-payloads with `type: "calls"` and `instanceId` (connect / status / terminate).
-Call permission replies arrive on the normal messages path
-(`call_permission_reply`). Details: **Calling** tag.
+**Replaces** the stored webhook list (it does not append). To deliver the same
+events to several endpoints, pass an array in `webhookUrl` (max 5) or use
+`POST /settings`. With several URLs already configured, posting only the
+disabled URL **drops the others** — send the complete array to re-enable one
+of many.
+
+Incoming payloads include messages, delivery ACKs, group updates, coexistence
+echoes, and calling events. WhatsApp Calling payloads (`type: "calls"`) are
+documented under the **Calling** tag. Call permission replies arrive on the
+normal messages path (`call_permission_reply`).
+
+Repeating `POST /webhook` with the same URL(s) clears an auto-disable (self-serve
+re-enable). Send/receive are not affected by webhook auto-disable.
 
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
@@ -212,13 +253,13 @@ func (a *WebhooksAPIService) SetWebhook(ctx context.Context) ApiSetWebhookReques
 }
 
 // Execute executes the request
-//  @return map[string]interface{}
-func (a *WebhooksAPIService) SetWebhookExecute(r ApiSetWebhookRequest) (map[string]interface{}, *http.Response, error) {
+//  @return SetWebhook200Response
+func (a *WebhooksAPIService) SetWebhookExecute(r ApiSetWebhookRequest) (*SetWebhook200Response, *http.Response, error) {
 	var (
 		localVarHTTPMethod   = http.MethodPost
 		localVarPostBody     interface{}
 		formFiles            []formFile
-		localVarReturnValue  map[string]interface{}
+		localVarReturnValue  *SetWebhook200Response
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "WebhooksAPIService.SetWebhook")
@@ -233,6 +274,9 @@ func (a *WebhooksAPIService) SetWebhookExecute(r ApiSetWebhookRequest) (map[stri
 	localVarFormParams := url.Values{}
 	if r.token == nil {
 		return localVarReturnValue, nil, reportError("token is required and must be specified")
+	}
+	if r.setWebhookRequest == nil {
+		return localVarReturnValue, nil, reportError("setWebhookRequest is required and must be specified")
 	}
 
 	parameterAddToHeaderOrQuery(localVarQueryParams, "token", r.token, "form", "")
@@ -254,7 +298,7 @@ func (a *WebhooksAPIService) SetWebhookExecute(r ApiSetWebhookRequest) (map[stri
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
 	// body params
-	localVarPostBody = r.getWebhook200Response
+	localVarPostBody = r.setWebhookRequest
 	if r.ctx != nil {
 		// API Key Authentication
 		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {

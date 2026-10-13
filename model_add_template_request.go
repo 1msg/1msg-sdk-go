@@ -1,7 +1,7 @@
 /*
 1MSG WhatsApp Business API (Public)
 
-Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** All requests require `token` query parameter with JWT or API key.  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
+Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
 API version: 1.0.0
 Contact: support@1msg.io
@@ -20,9 +20,13 @@ var _ MappedNullable = &AddTemplateRequest{}
 
 // AddTemplateRequest struct for AddTemplateRequest
 type AddTemplateRequest struct {
+	// Template name
 	Name *string `json:"name,omitempty"`
+	// MARKETING, UTILITY, or AUTHENTICATION
 	Category *string `json:"category,omitempty"`
+	// Template language code (e.g. en_US)
 	Language *string `json:"language,omitempty"`
+	// Template components (HEADER, BODY, FOOTER, BUTTONS, CAROUSEL)
 	Components []map[string]interface{} `json:"components,omitempty"`
 	AdditionalProperties map[string]interface{}
 }

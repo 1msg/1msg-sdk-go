@@ -1,7 +1,7 @@
 /*
 1MSG WhatsApp Business API (Public)
 
-Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** All requests require `token` query parameter with JWT or API key.  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
+Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
 API version: 1.0.0
 Contact: support@1msg.io
@@ -20,7 +20,10 @@ var _ MappedNullable = &SendReactionRequest{}
 
 // SendReactionRequest struct for SendReactionRequest
 type SendReactionRequest struct {
+	// Recipient phone with country code. Use phone or chatId.
 	Phone *string `json:"phone,omitempty"`
+	// Recipient chat ID (`phone@c.us`, group `@g.us`, or BSUID `@lid`). Use phone or chatId.
+	ChatId *string `json:"chatId,omitempty"`
 	Body *string `json:"body,omitempty"`
 	QuotedMsgId *string `json:"quotedMsgId,omitempty"`
 }
@@ -72,6 +75,38 @@ func (o *SendReactionRequest) HasPhone() bool {
 // SetPhone gets a reference to the given string and assigns it to the Phone field.
 func (o *SendReactionRequest) SetPhone(v string) {
 	o.Phone = &v
+}
+
+// GetChatId returns the ChatId field value if set, zero value otherwise.
+func (o *SendReactionRequest) GetChatId() string {
+	if o == nil || IsNil(o.ChatId) {
+		var ret string
+		return ret
+	}
+	return *o.ChatId
+}
+
+// GetChatIdOk returns a tuple with the ChatId field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *SendReactionRequest) GetChatIdOk() (*string, bool) {
+	if o == nil || IsNil(o.ChatId) {
+		return nil, false
+	}
+	return o.ChatId, true
+}
+
+// HasChatId returns a boolean if a field has been set.
+func (o *SendReactionRequest) HasChatId() bool {
+	if o != nil && !IsNil(o.ChatId) {
+		return true
+	}
+
+	return false
+}
+
+// SetChatId gets a reference to the given string and assigns it to the ChatId field.
+func (o *SendReactionRequest) SetChatId(v string) {
+	o.ChatId = &v
 }
 
 // GetBody returns the Body field value if set, zero value otherwise.
@@ -150,6 +185,9 @@ func (o SendReactionRequest) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.Phone) {
 		toSerialize["phone"] = o.Phone
+	}
+	if !IsNil(o.ChatId) {
+		toSerialize["chatId"] = o.ChatId
 	}
 	if !IsNil(o.Body) {
 		toSerialize["body"] = o.Body
