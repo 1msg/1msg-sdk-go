@@ -1,7 +1,7 @@
 /*
 1MSG WhatsApp Business API (Public)
 
-Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** All requests require `token` query parameter with JWT or API key.  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
+Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
 API version: 1.0.0
 Contact: support@1msg.io
@@ -22,11 +22,11 @@ var _ MappedNullable = &SendContactRequestContactsInner{}
 type SendContactRequestContactsInner struct {
 	Name *SendContactRequestContactsInnerName `json:"name,omitempty"`
 	Birthday *string `json:"birthday,omitempty"`
-	Addresses []interface{} `json:"addresses,omitempty"`
-	Emails []interface{} `json:"emails,omitempty"`
+	Addresses []map[string]interface{} `json:"addresses,omitempty"`
+	Emails []map[string]interface{} `json:"emails,omitempty"`
 	Org *SendContactRequestContactsInnerOrg `json:"org,omitempty"`
 	Phones []SendContactRequestContactsInnerPhonesInner `json:"phones,omitempty"`
-	Urls []interface{} `json:"urls,omitempty"`
+	Urls []map[string]interface{} `json:"urls,omitempty"`
 }
 
 // NewSendContactRequestContactsInner instantiates a new SendContactRequestContactsInner object
@@ -111,9 +111,9 @@ func (o *SendContactRequestContactsInner) SetBirthday(v string) {
 }
 
 // GetAddresses returns the Addresses field value if set, zero value otherwise.
-func (o *SendContactRequestContactsInner) GetAddresses() []interface{} {
+func (o *SendContactRequestContactsInner) GetAddresses() []map[string]interface{} {
 	if o == nil || IsNil(o.Addresses) {
-		var ret []interface{}
+		var ret []map[string]interface{}
 		return ret
 	}
 	return o.Addresses
@@ -121,7 +121,7 @@ func (o *SendContactRequestContactsInner) GetAddresses() []interface{} {
 
 // GetAddressesOk returns a tuple with the Addresses field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *SendContactRequestContactsInner) GetAddressesOk() ([]interface{}, bool) {
+func (o *SendContactRequestContactsInner) GetAddressesOk() ([]map[string]interface{}, bool) {
 	if o == nil || IsNil(o.Addresses) {
 		return nil, false
 	}
@@ -137,15 +137,15 @@ func (o *SendContactRequestContactsInner) HasAddresses() bool {
 	return false
 }
 
-// SetAddresses gets a reference to the given []interface{} and assigns it to the Addresses field.
-func (o *SendContactRequestContactsInner) SetAddresses(v []interface{}) {
+// SetAddresses gets a reference to the given []map[string]interface{} and assigns it to the Addresses field.
+func (o *SendContactRequestContactsInner) SetAddresses(v []map[string]interface{}) {
 	o.Addresses = v
 }
 
 // GetEmails returns the Emails field value if set, zero value otherwise.
-func (o *SendContactRequestContactsInner) GetEmails() []interface{} {
+func (o *SendContactRequestContactsInner) GetEmails() []map[string]interface{} {
 	if o == nil || IsNil(o.Emails) {
-		var ret []interface{}
+		var ret []map[string]interface{}
 		return ret
 	}
 	return o.Emails
@@ -153,7 +153,7 @@ func (o *SendContactRequestContactsInner) GetEmails() []interface{} {
 
 // GetEmailsOk returns a tuple with the Emails field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *SendContactRequestContactsInner) GetEmailsOk() ([]interface{}, bool) {
+func (o *SendContactRequestContactsInner) GetEmailsOk() ([]map[string]interface{}, bool) {
 	if o == nil || IsNil(o.Emails) {
 		return nil, false
 	}
@@ -169,8 +169,8 @@ func (o *SendContactRequestContactsInner) HasEmails() bool {
 	return false
 }
 
-// SetEmails gets a reference to the given []interface{} and assigns it to the Emails field.
-func (o *SendContactRequestContactsInner) SetEmails(v []interface{}) {
+// SetEmails gets a reference to the given []map[string]interface{} and assigns it to the Emails field.
+func (o *SendContactRequestContactsInner) SetEmails(v []map[string]interface{}) {
 	o.Emails = v
 }
 
@@ -239,9 +239,9 @@ func (o *SendContactRequestContactsInner) SetPhones(v []SendContactRequestContac
 }
 
 // GetUrls returns the Urls field value if set, zero value otherwise.
-func (o *SendContactRequestContactsInner) GetUrls() []interface{} {
+func (o *SendContactRequestContactsInner) GetUrls() []map[string]interface{} {
 	if o == nil || IsNil(o.Urls) {
-		var ret []interface{}
+		var ret []map[string]interface{}
 		return ret
 	}
 	return o.Urls
@@ -249,7 +249,7 @@ func (o *SendContactRequestContactsInner) GetUrls() []interface{} {
 
 // GetUrlsOk returns a tuple with the Urls field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *SendContactRequestContactsInner) GetUrlsOk() ([]interface{}, bool) {
+func (o *SendContactRequestContactsInner) GetUrlsOk() ([]map[string]interface{}, bool) {
 	if o == nil || IsNil(o.Urls) {
 		return nil, false
 	}
@@ -265,8 +265,8 @@ func (o *SendContactRequestContactsInner) HasUrls() bool {
 	return false
 }
 
-// SetUrls gets a reference to the given []interface{} and assigns it to the Urls field.
-func (o *SendContactRequestContactsInner) SetUrls(v []interface{}) {
+// SetUrls gets a reference to the given []map[string]interface{} and assigns it to the Urls field.
+func (o *SendContactRequestContactsInner) SetUrls(v []map[string]interface{}) {
 	o.Urls = v
 }
 

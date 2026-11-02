@@ -1,7 +1,7 @@
 /*
 1MSG WhatsApp Business API (Public)
 
-Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** All requests require `token` query parameter with JWT or API key.  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
+Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
 API version: 1.0.0
 Contact: support@1msg.io
@@ -20,6 +20,7 @@ var _ MappedNullable = &SendContactRequestContactsInnerPhonesInner{}
 
 // SendContactRequestContactsInnerPhonesInner struct for SendContactRequestContactsInnerPhonesInner
 type SendContactRequestContactsInnerPhonesInner struct {
+	// E.164 phone (`+79181976551`). Not a timestamp.
 	Phone *string `json:"phone,omitempty"`
 	Type *string `json:"type,omitempty"`
 	WaId *string `json:"wa_id,omitempty"`

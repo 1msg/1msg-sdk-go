@@ -1,7 +1,7 @@
 /*
 1MSG WhatsApp Business API (Public)
 
-Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** All requests require `token` query parameter with JWT or API key.  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
+Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
 API version: 1.0.0
 Contact: support@1msg.io
@@ -20,7 +20,11 @@ var _ MappedNullable = &SendLocationRequestRequest{}
 
 // SendLocationRequestRequest struct for SendLocationRequestRequest
 type SendLocationRequestRequest struct {
+	// Recipient phone with country code. Use phone or chatId.
 	Phone *string `json:"phone,omitempty"`
+	// Recipient chat ID (`phone@c.us`, group `@g.us`, or BSUID `@lid`). Use phone or chatId.
+	ChatId *string `json:"chatId,omitempty"`
+	QuotedMsgId *string `json:"quotedMsgId,omitempty"`
 	Body *string `json:"body,omitempty"`
 }
 
@@ -73,6 +77,70 @@ func (o *SendLocationRequestRequest) SetPhone(v string) {
 	o.Phone = &v
 }
 
+// GetChatId returns the ChatId field value if set, zero value otherwise.
+func (o *SendLocationRequestRequest) GetChatId() string {
+	if o == nil || IsNil(o.ChatId) {
+		var ret string
+		return ret
+	}
+	return *o.ChatId
+}
+
+// GetChatIdOk returns a tuple with the ChatId field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *SendLocationRequestRequest) GetChatIdOk() (*string, bool) {
+	if o == nil || IsNil(o.ChatId) {
+		return nil, false
+	}
+	return o.ChatId, true
+}
+
+// HasChatId returns a boolean if a field has been set.
+func (o *SendLocationRequestRequest) HasChatId() bool {
+	if o != nil && !IsNil(o.ChatId) {
+		return true
+	}
+
+	return false
+}
+
+// SetChatId gets a reference to the given string and assigns it to the ChatId field.
+func (o *SendLocationRequestRequest) SetChatId(v string) {
+	o.ChatId = &v
+}
+
+// GetQuotedMsgId returns the QuotedMsgId field value if set, zero value otherwise.
+func (o *SendLocationRequestRequest) GetQuotedMsgId() string {
+	if o == nil || IsNil(o.QuotedMsgId) {
+		var ret string
+		return ret
+	}
+	return *o.QuotedMsgId
+}
+
+// GetQuotedMsgIdOk returns a tuple with the QuotedMsgId field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *SendLocationRequestRequest) GetQuotedMsgIdOk() (*string, bool) {
+	if o == nil || IsNil(o.QuotedMsgId) {
+		return nil, false
+	}
+	return o.QuotedMsgId, true
+}
+
+// HasQuotedMsgId returns a boolean if a field has been set.
+func (o *SendLocationRequestRequest) HasQuotedMsgId() bool {
+	if o != nil && !IsNil(o.QuotedMsgId) {
+		return true
+	}
+
+	return false
+}
+
+// SetQuotedMsgId gets a reference to the given string and assigns it to the QuotedMsgId field.
+func (o *SendLocationRequestRequest) SetQuotedMsgId(v string) {
+	o.QuotedMsgId = &v
+}
+
 // GetBody returns the Body field value if set, zero value otherwise.
 func (o *SendLocationRequestRequest) GetBody() string {
 	if o == nil || IsNil(o.Body) {
@@ -117,6 +185,12 @@ func (o SendLocationRequestRequest) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
 	if !IsNil(o.Phone) {
 		toSerialize["phone"] = o.Phone
+	}
+	if !IsNil(o.ChatId) {
+		toSerialize["chatId"] = o.ChatId
+	}
+	if !IsNil(o.QuotedMsgId) {
+		toSerialize["quotedMsgId"] = o.QuotedMsgId
 	}
 	if !IsNil(o.Body) {
 		toSerialize["body"] = o.Body

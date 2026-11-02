@@ -1,7 +1,7 @@
 /*
 1MSG WhatsApp Business API (Public)
 
-Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** All requests require `token` query parameter with JWT or API key.  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
+Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
 API version: 1.0.0
 Contact: support@1msg.io
@@ -28,12 +28,18 @@ type ApiCreateFlowsRequest struct {
 	ctx context.Context
 	ApiService *FlowsAPIService
 	token *string
+	createFlowsRequest *CreateFlowsRequest
 	wabaAccountId *string
 }
 
 // JWT token or API key for authorization
 func (r ApiCreateFlowsRequest) Token(token string) ApiCreateFlowsRequest {
 	r.token = &token
+	return r
+}
+
+func (r ApiCreateFlowsRequest) CreateFlowsRequest(createFlowsRequest CreateFlowsRequest) ApiCreateFlowsRequest {
+	r.createFlowsRequest = &createFlowsRequest
 	return r
 }
 
@@ -48,6 +54,10 @@ func (r ApiCreateFlowsRequest) Execute() (*CreateGroups200Response, *http.Respon
 
 /*
 CreateFlows Create Flow
+
+Create a WhatsApp Flow (`name` + `categories` required).
+Currently returns HTTP 501 until the Meta Graph Flows rewrite is available.
+
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @return ApiCreateFlowsRequest
@@ -82,13 +92,16 @@ func (a *FlowsAPIService) CreateFlowsExecute(r ApiCreateFlowsRequest) (*CreateGr
 	if r.token == nil {
 		return localVarReturnValue, nil, reportError("token is required and must be specified")
 	}
+	if r.createFlowsRequest == nil {
+		return localVarReturnValue, nil, reportError("createFlowsRequest is required and must be specified")
+	}
 
 	parameterAddToHeaderOrQuery(localVarQueryParams, "token", r.token, "form", "")
 	if r.wabaAccountId != nil {
 		parameterAddToHeaderOrQuery(localVarQueryParams, "wabaAccountId", r.wabaAccountId, "form", "")
 	}
 	// to determine the Content-Type header
-	localVarHTTPContentTypes := []string{}
+	localVarHTTPContentTypes := []string{"application/json"}
 
 	// set Content-Type header
 	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
@@ -104,6 +117,8 @@ func (a *FlowsAPIService) CreateFlowsExecute(r ApiCreateFlowsRequest) (*CreateGr
 	if localVarHTTPHeaderAccept != "" {
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
+	// body params
+	localVarPostBody = r.createFlowsRequest
 	if r.ctx != nil {
 		// API Key Authentication
 		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
@@ -982,6 +997,7 @@ type ApiListFlowsRequest struct {
 	ApiService *FlowsAPIService
 	token *string
 	wabaAccountId *string
+	fields *string
 }
 
 // JWT token or API key for authorization
@@ -995,12 +1011,22 @@ func (r ApiListFlowsRequest) WabaAccountId(wabaAccountId string) ApiListFlowsReq
 	return r
 }
 
+// Comma-separated Flow fields to return
+func (r ApiListFlowsRequest) Fields(fields string) ApiListFlowsRequest {
+	r.fields = &fields
+	return r
+}
+
 func (r ApiListFlowsRequest) Execute() (*ListFlows200Response, *http.Response, error) {
 	return r.ApiService.ListFlowsExecute(r)
 }
 
 /*
 ListFlows List Flows
+
+List WhatsApp Flows for the WABA.
+Currently returns HTTP 501 until the Meta Graph Flows rewrite is available.
+
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @return ApiListFlowsRequest
@@ -1039,6 +1065,9 @@ func (a *FlowsAPIService) ListFlowsExecute(r ApiListFlowsRequest) (*ListFlows200
 	parameterAddToHeaderOrQuery(localVarQueryParams, "token", r.token, "form", "")
 	if r.wabaAccountId != nil {
 		parameterAddToHeaderOrQuery(localVarQueryParams, "wabaAccountId", r.wabaAccountId, "form", "")
+	}
+	if r.fields != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "fields", r.fields, "form", "")
 	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
@@ -1113,12 +1142,18 @@ type ApiPatchFlowsFlowIdAssetsRequest struct {
 	ApiService *FlowsAPIService
 	flowId string
 	token *string
+	patchFlowsFlowIdAssetsRequest *PatchFlowsFlowIdAssetsRequest
 	wabaAccountId *string
 }
 
 // JWT token or API key for authorization
 func (r ApiPatchFlowsFlowIdAssetsRequest) Token(token string) ApiPatchFlowsFlowIdAssetsRequest {
 	r.token = &token
+	return r
+}
+
+func (r ApiPatchFlowsFlowIdAssetsRequest) PatchFlowsFlowIdAssetsRequest(patchFlowsFlowIdAssetsRequest PatchFlowsFlowIdAssetsRequest) ApiPatchFlowsFlowIdAssetsRequest {
+	r.patchFlowsFlowIdAssetsRequest = &patchFlowsFlowIdAssetsRequest
 	return r
 }
 
@@ -1133,6 +1168,10 @@ func (r ApiPatchFlowsFlowIdAssetsRequest) Execute() (*PatchFlowsFlowIdAssets200R
 
 /*
 PatchFlowsFlowIdAssets Update Flow Structure
+
+Replace the Flow JSON document (`flowJson`).
+Currently returns HTTP 501 until the Meta Graph Flows rewrite is available.
+
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @param flowId Flow ID
@@ -1170,13 +1209,16 @@ func (a *FlowsAPIService) PatchFlowsFlowIdAssetsExecute(r ApiPatchFlowsFlowIdAss
 	if r.token == nil {
 		return localVarReturnValue, nil, reportError("token is required and must be specified")
 	}
+	if r.patchFlowsFlowIdAssetsRequest == nil {
+		return localVarReturnValue, nil, reportError("patchFlowsFlowIdAssetsRequest is required and must be specified")
+	}
 
 	parameterAddToHeaderOrQuery(localVarQueryParams, "token", r.token, "form", "")
 	if r.wabaAccountId != nil {
 		parameterAddToHeaderOrQuery(localVarQueryParams, "wabaAccountId", r.wabaAccountId, "form", "")
 	}
 	// to determine the Content-Type header
-	localVarHTTPContentTypes := []string{}
+	localVarHTTPContentTypes := []string{"application/json"}
 
 	// set Content-Type header
 	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
@@ -1192,6 +1234,8 @@ func (a *FlowsAPIService) PatchFlowsFlowIdAssetsExecute(r ApiPatchFlowsFlowIdAss
 	if localVarHTTPHeaderAccept != "" {
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
+	// body params
+	localVarPostBody = r.patchFlowsFlowIdAssetsRequest
 	if r.ctx != nil {
 		// API Key Authentication
 		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
@@ -1248,12 +1292,18 @@ type ApiPatchFlowsFlowIdMetadataRequest struct {
 	ApiService *FlowsAPIService
 	flowId string
 	token *string
+	patchFlowsFlowIdMetadataRequest *PatchFlowsFlowIdMetadataRequest
 	wabaAccountId *string
 }
 
 // JWT token or API key for authorization
 func (r ApiPatchFlowsFlowIdMetadataRequest) Token(token string) ApiPatchFlowsFlowIdMetadataRequest {
 	r.token = &token
+	return r
+}
+
+func (r ApiPatchFlowsFlowIdMetadataRequest) PatchFlowsFlowIdMetadataRequest(patchFlowsFlowIdMetadataRequest PatchFlowsFlowIdMetadataRequest) ApiPatchFlowsFlowIdMetadataRequest {
+	r.patchFlowsFlowIdMetadataRequest = &patchFlowsFlowIdMetadataRequest
 	return r
 }
 
@@ -1268,6 +1318,10 @@ func (r ApiPatchFlowsFlowIdMetadataRequest) Execute() (map[string]interface{}, *
 
 /*
 PatchFlowsFlowIdMetadata Update Flow Metadata
+
+Update Flow `name`, `categories`, and/or `endpointUri`.
+Currently returns HTTP 501 until the Meta Graph Flows rewrite is available.
+
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @param flowId Flow ID
@@ -1305,13 +1359,16 @@ func (a *FlowsAPIService) PatchFlowsFlowIdMetadataExecute(r ApiPatchFlowsFlowIdM
 	if r.token == nil {
 		return localVarReturnValue, nil, reportError("token is required and must be specified")
 	}
+	if r.patchFlowsFlowIdMetadataRequest == nil {
+		return localVarReturnValue, nil, reportError("patchFlowsFlowIdMetadataRequest is required and must be specified")
+	}
 
 	parameterAddToHeaderOrQuery(localVarQueryParams, "token", r.token, "form", "")
 	if r.wabaAccountId != nil {
 		parameterAddToHeaderOrQuery(localVarQueryParams, "wabaAccountId", r.wabaAccountId, "form", "")
 	}
 	// to determine the Content-Type header
-	localVarHTTPContentTypes := []string{}
+	localVarHTTPContentTypes := []string{"application/json"}
 
 	// set Content-Type header
 	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
@@ -1327,6 +1384,8 @@ func (a *FlowsAPIService) PatchFlowsFlowIdMetadataExecute(r ApiPatchFlowsFlowIdM
 	if localVarHTTPHeaderAccept != "" {
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
+	// body params
+	localVarPostBody = r.patchFlowsFlowIdMetadataRequest
 	if r.ctx != nil {
 		// API Key Authentication
 		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {

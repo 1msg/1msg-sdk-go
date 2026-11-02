@@ -1,7 +1,7 @@
 /*
 1MSG WhatsApp Business API (Public)
 
-Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** All requests require `token` query parameter with JWT or API key.  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
+Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
 API version: 1.0.0
 Contact: support@1msg.io
@@ -13,8 +13,6 @@ package onemsgsdk
 
 import (
 	"encoding/json"
-	"bytes"
-	"fmt"
 )
 
 // checks if the SendCarouselRequest1 type satisfies the MappedNullable interface at compile time
@@ -22,22 +20,23 @@ var _ MappedNullable = &SendCarouselRequest1{}
 
 // SendCarouselRequest1 struct for SendCarouselRequest1
 type SendCarouselRequest1 struct {
+	// Text shown above the carousel
 	Body *string `json:"body,omitempty"`
-	Params []map[string]interface{} `json:"params"`
+	// Preferred. 2–10 carousel cards.
+	Cards []map[string]interface{} `json:"cards,omitempty"`
+	// Template-like alternative — include a CAROUSEL component with cards
+	Params []map[string]interface{} `json:"params,omitempty"`
 	QuotedMsgId *string `json:"quotedMsgId,omitempty"`
 	ChatId *string `json:"chatId,omitempty"`
 	Phone *int32 `json:"phone,omitempty"`
 }
 
-type _SendCarouselRequest1 SendCarouselRequest1
-
 // NewSendCarouselRequest1 instantiates a new SendCarouselRequest1 object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewSendCarouselRequest1(params []map[string]interface{}) *SendCarouselRequest1 {
+func NewSendCarouselRequest1() *SendCarouselRequest1 {
 	this := SendCarouselRequest1{}
-	this.Params = params
 	return &this
 }
 
@@ -81,26 +80,66 @@ func (o *SendCarouselRequest1) SetBody(v string) {
 	o.Body = &v
 }
 
-// GetParams returns the Params field value
-func (o *SendCarouselRequest1) GetParams() []map[string]interface{} {
-	if o == nil {
+// GetCards returns the Cards field value if set, zero value otherwise.
+func (o *SendCarouselRequest1) GetCards() []map[string]interface{} {
+	if o == nil || IsNil(o.Cards) {
 		var ret []map[string]interface{}
 		return ret
 	}
+	return o.Cards
+}
 
+// GetCardsOk returns a tuple with the Cards field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *SendCarouselRequest1) GetCardsOk() ([]map[string]interface{}, bool) {
+	if o == nil || IsNil(o.Cards) {
+		return nil, false
+	}
+	return o.Cards, true
+}
+
+// HasCards returns a boolean if a field has been set.
+func (o *SendCarouselRequest1) HasCards() bool {
+	if o != nil && !IsNil(o.Cards) {
+		return true
+	}
+
+	return false
+}
+
+// SetCards gets a reference to the given []map[string]interface{} and assigns it to the Cards field.
+func (o *SendCarouselRequest1) SetCards(v []map[string]interface{}) {
+	o.Cards = v
+}
+
+// GetParams returns the Params field value if set, zero value otherwise.
+func (o *SendCarouselRequest1) GetParams() []map[string]interface{} {
+	if o == nil || IsNil(o.Params) {
+		var ret []map[string]interface{}
+		return ret
+	}
 	return o.Params
 }
 
-// GetParamsOk returns a tuple with the Params field value
+// GetParamsOk returns a tuple with the Params field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 func (o *SendCarouselRequest1) GetParamsOk() ([]map[string]interface{}, bool) {
-	if o == nil {
+	if o == nil || IsNil(o.Params) {
 		return nil, false
 	}
 	return o.Params, true
 }
 
-// SetParams sets field value
+// HasParams returns a boolean if a field has been set.
+func (o *SendCarouselRequest1) HasParams() bool {
+	if o != nil && !IsNil(o.Params) {
+		return true
+	}
+
+	return false
+}
+
+// SetParams gets a reference to the given []map[string]interface{} and assigns it to the Params field.
 func (o *SendCarouselRequest1) SetParams(v []map[string]interface{}) {
 	o.Params = v
 }
@@ -214,7 +253,12 @@ func (o SendCarouselRequest1) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.Body) {
 		toSerialize["body"] = o.Body
 	}
-	toSerialize["params"] = o.Params
+	if !IsNil(o.Cards) {
+		toSerialize["cards"] = o.Cards
+	}
+	if !IsNil(o.Params) {
+		toSerialize["params"] = o.Params
+	}
 	if !IsNil(o.QuotedMsgId) {
 		toSerialize["quotedMsgId"] = o.QuotedMsgId
 	}
@@ -225,43 +269,6 @@ func (o SendCarouselRequest1) ToMap() (map[string]interface{}, error) {
 		toSerialize["phone"] = o.Phone
 	}
 	return toSerialize, nil
-}
-
-func (o *SendCarouselRequest1) UnmarshalJSON(data []byte) (err error) {
-	// This validates that all required properties are included in the JSON object
-	// by unmarshalling the object into a generic map with string keys and checking
-	// that every required field exists as a key in the generic map.
-	requiredProperties := []string{
-		"params",
-	}
-
-	allProperties := make(map[string]interface{})
-
-	err = json.Unmarshal(data, &allProperties)
-
-	if err != nil {
-		return err;
-	}
-
-	for _, requiredProperty := range(requiredProperties) {
-		if _, exists := allProperties[requiredProperty]; !exists {
-			return fmt.Errorf("no value given for required property %v", requiredProperty)
-		}
-	}
-
-	varSendCarouselRequest1 := _SendCarouselRequest1{}
-
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.DisallowUnknownFields()
-	err = decoder.Decode(&varSendCarouselRequest1)
-
-	if err != nil {
-		return err
-	}
-
-	*o = SendCarouselRequest1(varSendCarouselRequest1)
-
-	return err
 }
 
 type NullableSendCarouselRequest1 struct {

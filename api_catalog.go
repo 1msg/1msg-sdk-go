@@ -1,7 +1,7 @@
 /*
 1MSG WhatsApp Business API (Public)
 
-Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** All requests require `token` query parameter with JWT or API key.  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
+Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
 API version: 1.0.0
 Contact: support@1msg.io
@@ -206,6 +206,9 @@ func (r ApiGetCommerceRequest) Execute() ([]GetCommerce200ResponseInner, *http.R
 GetCommerce Get Commerce Settings
 
 Returns catalog/cart commerce settings for the channel.
+
+Fails with a provider error when the WABA has no catalog linked — that is an
+API/account limitation, not an MCP schema bug.
 
 - `is_catalog_visible` — show catalog storefront icon (`true`) or hide it (`false`).
 - `is_cart_enabled` — enable cart (`true`) or disable it (`false`).

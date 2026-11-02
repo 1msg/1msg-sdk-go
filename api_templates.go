@@ -1,7 +1,7 @@
 /*
 1MSG WhatsApp Business API (Public)
 
-Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** All requests require `token` query parameter with JWT or API key.  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
+Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
 API version: 1.0.0
 Contact: support@1msg.io
@@ -41,12 +41,16 @@ func (r ApiAddTemplateRequest) AddTemplateRequest(addTemplateRequest AddTemplate
 	return r
 }
 
-func (r ApiAddTemplateRequest) Execute() (map[string]interface{}, *http.Response, error) {
+func (r ApiAddTemplateRequest) Execute() (*AddTemplate200Response, *http.Response, error) {
 	return r.ApiService.AddTemplateExecute(r)
 }
 
 /*
 AddTemplate Create message template
+
+Create a WABA message template (`name`, `category`, `language`, `components`).
+After create, Meta reviews the template; list it with `GET /templates`.
+
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @return ApiAddTemplateRequest
@@ -59,13 +63,13 @@ func (a *TemplatesAPIService) AddTemplate(ctx context.Context) ApiAddTemplateReq
 }
 
 // Execute executes the request
-//  @return map[string]interface{}
-func (a *TemplatesAPIService) AddTemplateExecute(r ApiAddTemplateRequest) (map[string]interface{}, *http.Response, error) {
+//  @return AddTemplate200Response
+func (a *TemplatesAPIService) AddTemplateExecute(r ApiAddTemplateRequest) (*AddTemplate200Response, *http.Response, error) {
 	var (
 		localVarHTTPMethod   = http.MethodPost
 		localVarPostBody     interface{}
 		formFiles            []formFile
-		localVarReturnValue  map[string]interface{}
+		localVarReturnValue  *AddTemplate200Response
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "TemplatesAPIService.AddTemplate")
@@ -178,11 +182,30 @@ type ApiListTemplatesRequest struct {
 	ctx context.Context
 	ApiService *TemplatesAPIService
 	token *string
+	limit *int32
+	offset *int32
+	sort *string
 }
 
 // JWT token or API key for authorization
 func (r ApiListTemplatesRequest) Token(token string) ApiListTemplatesRequest {
 	r.token = &token
+	return r
+}
+
+func (r ApiListTemplatesRequest) Limit(limit int32) ApiListTemplatesRequest {
+	r.limit = &limit
+	return r
+}
+
+func (r ApiListTemplatesRequest) Offset(offset int32) ApiListTemplatesRequest {
+	r.offset = &offset
+	return r
+}
+
+// Sort field (&#x60;id&#x60;, &#x60;name&#x60;, or &#x60;status&#x60;)
+func (r ApiListTemplatesRequest) Sort(sort string) ApiListTemplatesRequest {
+	r.sort = &sort
 	return r
 }
 
@@ -192,6 +215,8 @@ func (r ApiListTemplatesRequest) Execute() (*ListTemplates200Response, *http.Res
 
 /*
 ListTemplates Get templates list
+
+List message templates. Paginate with `limit` / `offset`; sort by `id`, `name`, or `status`.
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @return ApiListTemplatesRequest
@@ -228,6 +253,15 @@ func (a *TemplatesAPIService) ListTemplatesExecute(r ApiListTemplatesRequest) (*
 	}
 
 	parameterAddToHeaderOrQuery(localVarQueryParams, "token", r.token, "form", "")
+	if r.limit != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "limit", r.limit, "form", "")
+	}
+	if r.offset != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "offset", r.offset, "form", "")
+	}
+	if r.sort != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "sort", r.sort, "form", "")
+	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
 
@@ -300,7 +334,7 @@ type ApiRemoveTemplateRequest struct {
 	ctx context.Context
 	ApiService *TemplatesAPIService
 	token *string
-	requestBody *map[string]interface{}
+	removeTemplateRequest *RemoveTemplateRequest
 }
 
 // JWT token or API key for authorization
@@ -309,8 +343,8 @@ func (r ApiRemoveTemplateRequest) Token(token string) ApiRemoveTemplateRequest {
 	return r
 }
 
-func (r ApiRemoveTemplateRequest) RequestBody(requestBody map[string]interface{}) ApiRemoveTemplateRequest {
-	r.requestBody = &requestBody
+func (r ApiRemoveTemplateRequest) RemoveTemplateRequest(removeTemplateRequest RemoveTemplateRequest) ApiRemoveTemplateRequest {
+	r.removeTemplateRequest = &removeTemplateRequest
 	return r
 }
 
@@ -320,6 +354,8 @@ func (r ApiRemoveTemplateRequest) Execute() (map[string]interface{}, *http.Respo
 
 /*
 RemoveTemplate Remove message template
+
+Delete a message template by `name` (all language versions of that name).
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @return ApiRemoveTemplateRequest
@@ -354,6 +390,9 @@ func (a *TemplatesAPIService) RemoveTemplateExecute(r ApiRemoveTemplateRequest) 
 	if r.token == nil {
 		return localVarReturnValue, nil, reportError("token is required and must be specified")
 	}
+	if r.removeTemplateRequest == nil {
+		return localVarReturnValue, nil, reportError("removeTemplateRequest is required and must be specified")
+	}
 
 	parameterAddToHeaderOrQuery(localVarQueryParams, "token", r.token, "form", "")
 	// to determine the Content-Type header
@@ -374,7 +413,7 @@ func (a *TemplatesAPIService) RemoveTemplateExecute(r ApiRemoveTemplateRequest) 
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
 	// body params
-	localVarPostBody = r.requestBody
+	localVarPostBody = r.removeTemplateRequest
 	if r.ctx != nil {
 		// API Key Authentication
 		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
@@ -472,26 +511,28 @@ func (r ApiSendTemplateRequest) Execute() (map[string]interface{}, *http.Respons
 /*
 SendTemplate Send Template Message
 
-Send a WhatsApp template message (works outside the 24-hour session window).
+Send a WhatsApp **template** message (works outside the 24-hour session window).
+
+Use this tool — not `send_message` — when the 24h session is closed.
+
+`params` MUST be Cloud API **component objects**, never a flat list of strings
+and never the old On-Prem `hsm` / `localizable_params` format.
+
+Example body variable `{{1}}`:
+
+```json
+{
+  "type": "body",
+  "parameters": [{ "type": "text", "text": "Ivan" }]
+}
+```
+
+Do not send `"type": "hsm"` and do not send `params: ["Ivan", "123"]`.
 
 Supported `params` button `sub_type` values include: `url`, `quick_reply`,
 `copy_code` / `coupon_code`, `catalog`, `flow`, `limited_time_offer`, and
 **`order_details`** (WhatsApp Payments **India only** — requires an approved
 Utility template with an ORDER_DETAILS button).
-
-For India order/invoice payments outside 24h, include a button component:
-
-```json
-{
-  "type": "button",
-  "sub_type": "order_details",
-  "index": 0,
-  "parameters": [{
-    "type": "action",
-    "action": { "order_details": { "reference_id": "...", "currency": "INR", "order": {} } }
-  }]
-}
-```
 
 Convenience wrapper with structured fields: `POST /sendOrderDetails`.
 

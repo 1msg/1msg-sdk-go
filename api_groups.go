@@ -1,7 +1,7 @@
 /*
 1MSG WhatsApp Business API (Public)
 
-Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** All requests require `token` query parameter with JWT or API key.  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
+Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
 API version: 1.0.0
 Contact: support@1msg.io
@@ -28,11 +28,17 @@ type ApiCreateGroupsRequest struct {
 	ctx context.Context
 	ApiService *GroupsAPIService
 	token *string
+	createGroupsRequest *CreateGroupsRequest
 }
 
 // JWT token or API key for authorization
 func (r ApiCreateGroupsRequest) Token(token string) ApiCreateGroupsRequest {
 	r.token = &token
+	return r
+}
+
+func (r ApiCreateGroupsRequest) CreateGroupsRequest(createGroupsRequest CreateGroupsRequest) ApiCreateGroupsRequest {
+	r.createGroupsRequest = &createGroupsRequest
 	return r
 }
 
@@ -76,10 +82,13 @@ func (a *GroupsAPIService) CreateGroupsExecute(r ApiCreateGroupsRequest) (*Creat
 	if r.token == nil {
 		return localVarReturnValue, nil, reportError("token is required and must be specified")
 	}
+	if r.createGroupsRequest == nil {
+		return localVarReturnValue, nil, reportError("createGroupsRequest is required and must be specified")
+	}
 
 	parameterAddToHeaderOrQuery(localVarQueryParams, "token", r.token, "form", "")
 	// to determine the Content-Type header
-	localVarHTTPContentTypes := []string{}
+	localVarHTTPContentTypes := []string{"application/json"}
 
 	// set Content-Type header
 	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
@@ -95,6 +104,8 @@ func (a *GroupsAPIService) CreateGroupsExecute(r ApiCreateGroupsRequest) (*Creat
 	if localVarHTTPHeaderAccept != "" {
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
+	// body params
+	localVarPostBody = r.createGroupsRequest
 	if r.ctx != nil {
 		// API Key Authentication
 		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
@@ -151,11 +162,17 @@ type ApiCreateGroupsGroupIdRequest struct {
 	ApiService *GroupsAPIService
 	groupId string
 	token *string
+	createGroupsGroupIdRequest *CreateGroupsGroupIdRequest
 }
 
 // JWT token or API key for authorization
 func (r ApiCreateGroupsGroupIdRequest) Token(token string) ApiCreateGroupsGroupIdRequest {
 	r.token = &token
+	return r
+}
+
+func (r ApiCreateGroupsGroupIdRequest) CreateGroupsGroupIdRequest(createGroupsGroupIdRequest CreateGroupsGroupIdRequest) ApiCreateGroupsGroupIdRequest {
+	r.createGroupsGroupIdRequest = &createGroupsGroupIdRequest
 	return r
 }
 
@@ -165,6 +182,10 @@ func (r ApiCreateGroupsGroupIdRequest) Execute() (map[string]interface{}, *http.
 
 /*
 CreateGroupsGroupId Update Group Info
+
+Update group subject, description, and/or profile picture.
+Path `groupId` is the WABA group id (without `@g.us`).
+
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @param groupId
@@ -202,10 +223,13 @@ func (a *GroupsAPIService) CreateGroupsGroupIdExecute(r ApiCreateGroupsGroupIdRe
 	if r.token == nil {
 		return localVarReturnValue, nil, reportError("token is required and must be specified")
 	}
+	if r.createGroupsGroupIdRequest == nil {
+		return localVarReturnValue, nil, reportError("createGroupsGroupIdRequest is required and must be specified")
+	}
 
 	parameterAddToHeaderOrQuery(localVarQueryParams, "token", r.token, "form", "")
 	// to determine the Content-Type header
-	localVarHTTPContentTypes := []string{}
+	localVarHTTPContentTypes := []string{"application/json"}
 
 	// set Content-Type header
 	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
@@ -221,6 +245,8 @@ func (a *GroupsAPIService) CreateGroupsGroupIdExecute(r ApiCreateGroupsGroupIdRe
 	if localVarHTTPHeaderAccept != "" {
 		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
 	}
+	// body params
+	localVarPostBody = r.createGroupsGroupIdRequest
 	if r.ctx != nil {
 		// API Key Authentication
 		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
@@ -529,11 +555,18 @@ type ApiGetGroupsGroupIdRequest struct {
 	ApiService *GroupsAPIService
 	groupId string
 	token *string
+	fields *string
 }
 
 // JWT token or API key for authorization
 func (r ApiGetGroupsGroupIdRequest) Token(token string) ApiGetGroupsGroupIdRequest {
 	r.token = &token
+	return r
+}
+
+// Comma-separated group fields to return
+func (r ApiGetGroupsGroupIdRequest) Fields(fields string) ApiGetGroupsGroupIdRequest {
+	r.fields = &fields
 	return r
 }
 
@@ -582,6 +615,9 @@ func (a *GroupsAPIService) GetGroupsGroupIdExecute(r ApiGetGroupsGroupIdRequest)
 	}
 
 	parameterAddToHeaderOrQuery(localVarQueryParams, "token", r.token, "form", "")
+	if r.fields != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "fields", r.fields, "form", "")
+	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
 
@@ -780,11 +816,32 @@ type ApiListGroupsRequest struct {
 	ctx context.Context
 	ApiService *GroupsAPIService
 	token *string
+	limit *int32
+	before *string
+	after *string
 }
 
 // JWT token or API key for authorization
 func (r ApiListGroupsRequest) Token(token string) ApiListGroupsRequest {
 	r.token = &token
+	return r
+}
+
+// Max groups to return
+func (r ApiListGroupsRequest) Limit(limit int32) ApiListGroupsRequest {
+	r.limit = &limit
+	return r
+}
+
+// Cursor for the previous page
+func (r ApiListGroupsRequest) Before(before string) ApiListGroupsRequest {
+	r.before = &before
+	return r
+}
+
+// Cursor for the next page
+func (r ApiListGroupsRequest) After(after string) ApiListGroupsRequest {
+	r.after = &after
 	return r
 }
 
@@ -794,6 +851,8 @@ func (r ApiListGroupsRequest) Execute() (map[string]interface{}, *http.Response,
 
 /*
 ListGroups Get Groups List
+
+List WhatsApp groups for this channel. Paginate with `limit`, `before`, and `after`.
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @return ApiListGroupsRequest
@@ -830,6 +889,15 @@ func (a *GroupsAPIService) ListGroupsExecute(r ApiListGroupsRequest) (map[string
 	}
 
 	parameterAddToHeaderOrQuery(localVarQueryParams, "token", r.token, "form", "")
+	if r.limit != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "limit", r.limit, "form", "")
+	}
+	if r.before != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "before", r.before, "form", "")
+	}
+	if r.after != nil {
+		parameterAddToHeaderOrQuery(localVarQueryParams, "after", r.after, "form", "")
+	}
 	// to determine the Content-Type header
 	localVarHTTPContentTypes := []string{}
 

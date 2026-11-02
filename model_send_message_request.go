@@ -1,7 +1,7 @@
 /*
 1MSG WhatsApp Business API (Public)
 
-Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** All requests require `token` query parameter with JWT or API key.  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
+Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
 API version: 1.0.0
 Contact: support@1msg.io
@@ -26,8 +26,8 @@ type SendMessageRequest struct {
 	Body string `json:"body"`
 	// Message ID to quote/reply to (Cloud API wamid)
 	QuotedMsgId *string `json:"quotedMsgId,omitempty" validate:"regexp=^wamid\\\\..+$"`
-	// Chat ID in format: phone@c.us (individual) or phone@g.us (group)
-	ChatId *string `json:"chatId,omitempty" validate:"regexp=^[0-9]+@[cg]\\\\.us$"`
+	// Recipient chat ID: phone@c.us, group@g.us, or BSUID@lid
+	ChatId *string `json:"chatId,omitempty"`
 	// Phone number starting with country code (alternative to chatId)
 	Phone *int32 `json:"phone,omitempty"`
 }

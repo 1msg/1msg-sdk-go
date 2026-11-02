@@ -1,7 +1,7 @@
 /*
 1MSG WhatsApp Business API (Public)
 
-Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** All requests require `token` query parameter with JWT or API key.  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
+Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
 API version: 1.0.0
 Contact: support@1msg.io
@@ -42,7 +42,9 @@ func (r ApiGetMeRequest) Execute() (*ProfileInfo, *http.Response, error) {
 /*
 GetMe Get Profile Info
 
-Get WhatsApp Business Account profile information
+Return the WhatsApp Business profile for this channel: About, address,
+description, email, phone, websites, industry (`vertical`), and profile photo URL.
+
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  @return ApiGetMeRequest
@@ -186,7 +188,7 @@ func (r ApiUpdateMeRequest) UpdateMeRequest(updateMeRequest UpdateMeRequest) Api
 	return r
 }
 
-func (r ApiUpdateMeRequest) Execute() (map[string]interface{}, *http.Response, error) {
+func (r ApiUpdateMeRequest) Execute() (*UpdateMe200Response, *http.Response, error) {
 	return r.ApiService.UpdateMeExecute(r)
 }
 
@@ -209,13 +211,13 @@ func (a *ProfileAPIService) UpdateMe(ctx context.Context) ApiUpdateMeRequest {
 }
 
 // Execute executes the request
-//  @return map[string]interface{}
-func (a *ProfileAPIService) UpdateMeExecute(r ApiUpdateMeRequest) (map[string]interface{}, *http.Response, error) {
+//  @return UpdateMe200Response
+func (a *ProfileAPIService) UpdateMeExecute(r ApiUpdateMeRequest) (*UpdateMe200Response, *http.Response, error) {
 	var (
 		localVarHTTPMethod   = http.MethodPost
 		localVarPostBody     interface{}
 		formFiles            []formFile
-		localVarReturnValue  map[string]interface{}
+		localVarReturnValue  *UpdateMe200Response
 	)
 
 	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "ProfileAPIService.UpdateMe")
@@ -230,6 +232,9 @@ func (a *ProfileAPIService) UpdateMeExecute(r ApiUpdateMeRequest) (map[string]in
 	localVarFormParams := url.Values{}
 	if r.token == nil {
 		return localVarReturnValue, nil, reportError("token is required and must be specified")
+	}
+	if r.updateMeRequest == nil {
+		return localVarReturnValue, nil, reportError("updateMeRequest is required and must be specified")
 	}
 
 	parameterAddToHeaderOrQuery(localVarQueryParams, "token", r.token, "form", "")

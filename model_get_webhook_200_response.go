@@ -1,7 +1,7 @@
 /*
 1MSG WhatsApp Business API (Public)
 
-Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** All requests require `token` query parameter with JWT or API key.  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
+Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
 API version: 1.0.0
 Contact: support@1msg.io
@@ -20,7 +20,29 @@ var _ MappedNullable = &GetWebhook200Response{}
 
 // GetWebhook200Response struct for GetWebhook200Response
 type GetWebhook200Response struct {
-	WebhookUrl *string `json:"webhookUrl,omitempty"`
+	WebhookUrl NullableGetWebhook200ResponseWebhookUrl `json:"webhookUrl,omitempty"`
+	// `true` when at least one URL in `webhookUrl` is sticky auto-disabled. Not \"the channel is dead\": other configured URLs still receive events. Send/receive are unaffected. 
+	HaveDisabledWebhooks *bool `json:"haveDisabledWebhooks,omitempty"`
+	// Compatibility scalar for **one** URL (first sticky-disabled, else first configured). Not the channel as a whole. Prefer `webhookStatuses[].circuitState`. 
+	CircuitState *string `json:"circuitState,omitempty"`
+	// Last qualifying fail reason of the summary URL (same URL as `circuitState`)
+	Reason *string `json:"reason,omitempty"`
+	// Diagnostic only (summary URL). Qualifying failures in the rolling ~10 minute breaker window — not lifetime and not customer retries. Prefer `webhookStatuses` / `disabledWebhooks`. 
+	Fails *int32 `json:"fails,omitempty"`
+	// Diagnostic only (summary URL). Failed recovery probes (≈15 min → 1 h → 6 h). Sticky disable after 3. Not a blind unblock timer. 
+	Trips *int32 `json:"trips,omitempty"`
+	// Epoch milliseconds when the summary URL became sticky-disabled
+	DisabledAt *int32 `json:"disabledAt,omitempty"`
+	// Diagnostic only (summary URL). Epoch ms of the first fail in the current ~10 minute window (pairs with `fails`). 
+	FirstFailAt *int32 `json:"firstFailAt,omitempty"`
+	// Last HTTP status from the summary URL, when known
+	LastStatus *int32 `json:"lastStatus,omitempty"`
+	// Epoch milliseconds of the next half-open probe for the summary URL, if any
+	NextProbeAt *int32 `json:"nextProbeAt,omitempty"`
+	// Currently configured URLs that are sticky auto-disabled (subset of `webhookUrl`). Does not include leftover URLs that are no longer configured. 
+	DisabledWebhooks []map[string]interface{} `json:"disabledWebhooks,omitempty"`
+	// One entry per currently configured URL. Prefer this over top-level `haveDisabledWebhooks` / `circuitState` when more than one webhook is set. 
+	WebhookStatuses []WebhookUrlStatus `json:"webhookStatuses,omitempty"`
 	AdditionalProperties map[string]interface{}
 }
 
@@ -43,36 +65,398 @@ func NewGetWebhook200ResponseWithDefaults() *GetWebhook200Response {
 	return &this
 }
 
-// GetWebhookUrl returns the WebhookUrl field value if set, zero value otherwise.
-func (o *GetWebhook200Response) GetWebhookUrl() string {
-	if o == nil || IsNil(o.WebhookUrl) {
-		var ret string
+// GetWebhookUrl returns the WebhookUrl field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *GetWebhook200Response) GetWebhookUrl() GetWebhook200ResponseWebhookUrl {
+	if o == nil || IsNil(o.WebhookUrl.Get()) {
+		var ret GetWebhook200ResponseWebhookUrl
 		return ret
 	}
-	return *o.WebhookUrl
+	return *o.WebhookUrl.Get()
 }
 
 // GetWebhookUrlOk returns a tuple with the WebhookUrl field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *GetWebhook200Response) GetWebhookUrlOk() (*string, bool) {
-	if o == nil || IsNil(o.WebhookUrl) {
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *GetWebhook200Response) GetWebhookUrlOk() (*GetWebhook200ResponseWebhookUrl, bool) {
+	if o == nil {
 		return nil, false
 	}
-	return o.WebhookUrl, true
+	return o.WebhookUrl.Get(), o.WebhookUrl.IsSet()
 }
 
 // HasWebhookUrl returns a boolean if a field has been set.
 func (o *GetWebhook200Response) HasWebhookUrl() bool {
-	if o != nil && !IsNil(o.WebhookUrl) {
+	if o != nil && o.WebhookUrl.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetWebhookUrl gets a reference to the given string and assigns it to the WebhookUrl field.
-func (o *GetWebhook200Response) SetWebhookUrl(v string) {
-	o.WebhookUrl = &v
+// SetWebhookUrl gets a reference to the given NullableGetWebhook200ResponseWebhookUrl and assigns it to the WebhookUrl field.
+func (o *GetWebhook200Response) SetWebhookUrl(v GetWebhook200ResponseWebhookUrl) {
+	o.WebhookUrl.Set(&v)
+}
+// SetWebhookUrlNil sets the value for WebhookUrl to be an explicit nil
+func (o *GetWebhook200Response) SetWebhookUrlNil() {
+	o.WebhookUrl.Set(nil)
+}
+
+// UnsetWebhookUrl ensures that no value is present for WebhookUrl, not even an explicit nil
+func (o *GetWebhook200Response) UnsetWebhookUrl() {
+	o.WebhookUrl.Unset()
+}
+
+// GetHaveDisabledWebhooks returns the HaveDisabledWebhooks field value if set, zero value otherwise.
+func (o *GetWebhook200Response) GetHaveDisabledWebhooks() bool {
+	if o == nil || IsNil(o.HaveDisabledWebhooks) {
+		var ret bool
+		return ret
+	}
+	return *o.HaveDisabledWebhooks
+}
+
+// GetHaveDisabledWebhooksOk returns a tuple with the HaveDisabledWebhooks field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *GetWebhook200Response) GetHaveDisabledWebhooksOk() (*bool, bool) {
+	if o == nil || IsNil(o.HaveDisabledWebhooks) {
+		return nil, false
+	}
+	return o.HaveDisabledWebhooks, true
+}
+
+// HasHaveDisabledWebhooks returns a boolean if a field has been set.
+func (o *GetWebhook200Response) HasHaveDisabledWebhooks() bool {
+	if o != nil && !IsNil(o.HaveDisabledWebhooks) {
+		return true
+	}
+
+	return false
+}
+
+// SetHaveDisabledWebhooks gets a reference to the given bool and assigns it to the HaveDisabledWebhooks field.
+func (o *GetWebhook200Response) SetHaveDisabledWebhooks(v bool) {
+	o.HaveDisabledWebhooks = &v
+}
+
+// GetCircuitState returns the CircuitState field value if set, zero value otherwise.
+func (o *GetWebhook200Response) GetCircuitState() string {
+	if o == nil || IsNil(o.CircuitState) {
+		var ret string
+		return ret
+	}
+	return *o.CircuitState
+}
+
+// GetCircuitStateOk returns a tuple with the CircuitState field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *GetWebhook200Response) GetCircuitStateOk() (*string, bool) {
+	if o == nil || IsNil(o.CircuitState) {
+		return nil, false
+	}
+	return o.CircuitState, true
+}
+
+// HasCircuitState returns a boolean if a field has been set.
+func (o *GetWebhook200Response) HasCircuitState() bool {
+	if o != nil && !IsNil(o.CircuitState) {
+		return true
+	}
+
+	return false
+}
+
+// SetCircuitState gets a reference to the given string and assigns it to the CircuitState field.
+func (o *GetWebhook200Response) SetCircuitState(v string) {
+	o.CircuitState = &v
+}
+
+// GetReason returns the Reason field value if set, zero value otherwise.
+func (o *GetWebhook200Response) GetReason() string {
+	if o == nil || IsNil(o.Reason) {
+		var ret string
+		return ret
+	}
+	return *o.Reason
+}
+
+// GetReasonOk returns a tuple with the Reason field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *GetWebhook200Response) GetReasonOk() (*string, bool) {
+	if o == nil || IsNil(o.Reason) {
+		return nil, false
+	}
+	return o.Reason, true
+}
+
+// HasReason returns a boolean if a field has been set.
+func (o *GetWebhook200Response) HasReason() bool {
+	if o != nil && !IsNil(o.Reason) {
+		return true
+	}
+
+	return false
+}
+
+// SetReason gets a reference to the given string and assigns it to the Reason field.
+func (o *GetWebhook200Response) SetReason(v string) {
+	o.Reason = &v
+}
+
+// GetFails returns the Fails field value if set, zero value otherwise.
+func (o *GetWebhook200Response) GetFails() int32 {
+	if o == nil || IsNil(o.Fails) {
+		var ret int32
+		return ret
+	}
+	return *o.Fails
+}
+
+// GetFailsOk returns a tuple with the Fails field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *GetWebhook200Response) GetFailsOk() (*int32, bool) {
+	if o == nil || IsNil(o.Fails) {
+		return nil, false
+	}
+	return o.Fails, true
+}
+
+// HasFails returns a boolean if a field has been set.
+func (o *GetWebhook200Response) HasFails() bool {
+	if o != nil && !IsNil(o.Fails) {
+		return true
+	}
+
+	return false
+}
+
+// SetFails gets a reference to the given int32 and assigns it to the Fails field.
+func (o *GetWebhook200Response) SetFails(v int32) {
+	o.Fails = &v
+}
+
+// GetTrips returns the Trips field value if set, zero value otherwise.
+func (o *GetWebhook200Response) GetTrips() int32 {
+	if o == nil || IsNil(o.Trips) {
+		var ret int32
+		return ret
+	}
+	return *o.Trips
+}
+
+// GetTripsOk returns a tuple with the Trips field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *GetWebhook200Response) GetTripsOk() (*int32, bool) {
+	if o == nil || IsNil(o.Trips) {
+		return nil, false
+	}
+	return o.Trips, true
+}
+
+// HasTrips returns a boolean if a field has been set.
+func (o *GetWebhook200Response) HasTrips() bool {
+	if o != nil && !IsNil(o.Trips) {
+		return true
+	}
+
+	return false
+}
+
+// SetTrips gets a reference to the given int32 and assigns it to the Trips field.
+func (o *GetWebhook200Response) SetTrips(v int32) {
+	o.Trips = &v
+}
+
+// GetDisabledAt returns the DisabledAt field value if set, zero value otherwise.
+func (o *GetWebhook200Response) GetDisabledAt() int32 {
+	if o == nil || IsNil(o.DisabledAt) {
+		var ret int32
+		return ret
+	}
+	return *o.DisabledAt
+}
+
+// GetDisabledAtOk returns a tuple with the DisabledAt field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *GetWebhook200Response) GetDisabledAtOk() (*int32, bool) {
+	if o == nil || IsNil(o.DisabledAt) {
+		return nil, false
+	}
+	return o.DisabledAt, true
+}
+
+// HasDisabledAt returns a boolean if a field has been set.
+func (o *GetWebhook200Response) HasDisabledAt() bool {
+	if o != nil && !IsNil(o.DisabledAt) {
+		return true
+	}
+
+	return false
+}
+
+// SetDisabledAt gets a reference to the given int32 and assigns it to the DisabledAt field.
+func (o *GetWebhook200Response) SetDisabledAt(v int32) {
+	o.DisabledAt = &v
+}
+
+// GetFirstFailAt returns the FirstFailAt field value if set, zero value otherwise.
+func (o *GetWebhook200Response) GetFirstFailAt() int32 {
+	if o == nil || IsNil(o.FirstFailAt) {
+		var ret int32
+		return ret
+	}
+	return *o.FirstFailAt
+}
+
+// GetFirstFailAtOk returns a tuple with the FirstFailAt field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *GetWebhook200Response) GetFirstFailAtOk() (*int32, bool) {
+	if o == nil || IsNil(o.FirstFailAt) {
+		return nil, false
+	}
+	return o.FirstFailAt, true
+}
+
+// HasFirstFailAt returns a boolean if a field has been set.
+func (o *GetWebhook200Response) HasFirstFailAt() bool {
+	if o != nil && !IsNil(o.FirstFailAt) {
+		return true
+	}
+
+	return false
+}
+
+// SetFirstFailAt gets a reference to the given int32 and assigns it to the FirstFailAt field.
+func (o *GetWebhook200Response) SetFirstFailAt(v int32) {
+	o.FirstFailAt = &v
+}
+
+// GetLastStatus returns the LastStatus field value if set, zero value otherwise.
+func (o *GetWebhook200Response) GetLastStatus() int32 {
+	if o == nil || IsNil(o.LastStatus) {
+		var ret int32
+		return ret
+	}
+	return *o.LastStatus
+}
+
+// GetLastStatusOk returns a tuple with the LastStatus field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *GetWebhook200Response) GetLastStatusOk() (*int32, bool) {
+	if o == nil || IsNil(o.LastStatus) {
+		return nil, false
+	}
+	return o.LastStatus, true
+}
+
+// HasLastStatus returns a boolean if a field has been set.
+func (o *GetWebhook200Response) HasLastStatus() bool {
+	if o != nil && !IsNil(o.LastStatus) {
+		return true
+	}
+
+	return false
+}
+
+// SetLastStatus gets a reference to the given int32 and assigns it to the LastStatus field.
+func (o *GetWebhook200Response) SetLastStatus(v int32) {
+	o.LastStatus = &v
+}
+
+// GetNextProbeAt returns the NextProbeAt field value if set, zero value otherwise.
+func (o *GetWebhook200Response) GetNextProbeAt() int32 {
+	if o == nil || IsNil(o.NextProbeAt) {
+		var ret int32
+		return ret
+	}
+	return *o.NextProbeAt
+}
+
+// GetNextProbeAtOk returns a tuple with the NextProbeAt field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *GetWebhook200Response) GetNextProbeAtOk() (*int32, bool) {
+	if o == nil || IsNil(o.NextProbeAt) {
+		return nil, false
+	}
+	return o.NextProbeAt, true
+}
+
+// HasNextProbeAt returns a boolean if a field has been set.
+func (o *GetWebhook200Response) HasNextProbeAt() bool {
+	if o != nil && !IsNil(o.NextProbeAt) {
+		return true
+	}
+
+	return false
+}
+
+// SetNextProbeAt gets a reference to the given int32 and assigns it to the NextProbeAt field.
+func (o *GetWebhook200Response) SetNextProbeAt(v int32) {
+	o.NextProbeAt = &v
+}
+
+// GetDisabledWebhooks returns the DisabledWebhooks field value if set, zero value otherwise.
+func (o *GetWebhook200Response) GetDisabledWebhooks() []map[string]interface{} {
+	if o == nil || IsNil(o.DisabledWebhooks) {
+		var ret []map[string]interface{}
+		return ret
+	}
+	return o.DisabledWebhooks
+}
+
+// GetDisabledWebhooksOk returns a tuple with the DisabledWebhooks field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *GetWebhook200Response) GetDisabledWebhooksOk() ([]map[string]interface{}, bool) {
+	if o == nil || IsNil(o.DisabledWebhooks) {
+		return nil, false
+	}
+	return o.DisabledWebhooks, true
+}
+
+// HasDisabledWebhooks returns a boolean if a field has been set.
+func (o *GetWebhook200Response) HasDisabledWebhooks() bool {
+	if o != nil && !IsNil(o.DisabledWebhooks) {
+		return true
+	}
+
+	return false
+}
+
+// SetDisabledWebhooks gets a reference to the given []map[string]interface{} and assigns it to the DisabledWebhooks field.
+func (o *GetWebhook200Response) SetDisabledWebhooks(v []map[string]interface{}) {
+	o.DisabledWebhooks = v
+}
+
+// GetWebhookStatuses returns the WebhookStatuses field value if set, zero value otherwise.
+func (o *GetWebhook200Response) GetWebhookStatuses() []WebhookUrlStatus {
+	if o == nil || IsNil(o.WebhookStatuses) {
+		var ret []WebhookUrlStatus
+		return ret
+	}
+	return o.WebhookStatuses
+}
+
+// GetWebhookStatusesOk returns a tuple with the WebhookStatuses field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *GetWebhook200Response) GetWebhookStatusesOk() ([]WebhookUrlStatus, bool) {
+	if o == nil || IsNil(o.WebhookStatuses) {
+		return nil, false
+	}
+	return o.WebhookStatuses, true
+}
+
+// HasWebhookStatuses returns a boolean if a field has been set.
+func (o *GetWebhook200Response) HasWebhookStatuses() bool {
+	if o != nil && !IsNil(o.WebhookStatuses) {
+		return true
+	}
+
+	return false
+}
+
+// SetWebhookStatuses gets a reference to the given []WebhookUrlStatus and assigns it to the WebhookStatuses field.
+func (o *GetWebhook200Response) SetWebhookStatuses(v []WebhookUrlStatus) {
+	o.WebhookStatuses = v
 }
 
 func (o GetWebhook200Response) MarshalJSON() ([]byte, error) {
@@ -85,8 +469,41 @@ func (o GetWebhook200Response) MarshalJSON() ([]byte, error) {
 
 func (o GetWebhook200Response) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
-	if !IsNil(o.WebhookUrl) {
-		toSerialize["webhookUrl"] = o.WebhookUrl
+	if o.WebhookUrl.IsSet() {
+		toSerialize["webhookUrl"] = o.WebhookUrl.Get()
+	}
+	if !IsNil(o.HaveDisabledWebhooks) {
+		toSerialize["haveDisabledWebhooks"] = o.HaveDisabledWebhooks
+	}
+	if !IsNil(o.CircuitState) {
+		toSerialize["circuitState"] = o.CircuitState
+	}
+	if !IsNil(o.Reason) {
+		toSerialize["reason"] = o.Reason
+	}
+	if !IsNil(o.Fails) {
+		toSerialize["fails"] = o.Fails
+	}
+	if !IsNil(o.Trips) {
+		toSerialize["trips"] = o.Trips
+	}
+	if !IsNil(o.DisabledAt) {
+		toSerialize["disabledAt"] = o.DisabledAt
+	}
+	if !IsNil(o.FirstFailAt) {
+		toSerialize["firstFailAt"] = o.FirstFailAt
+	}
+	if !IsNil(o.LastStatus) {
+		toSerialize["lastStatus"] = o.LastStatus
+	}
+	if !IsNil(o.NextProbeAt) {
+		toSerialize["nextProbeAt"] = o.NextProbeAt
+	}
+	if !IsNil(o.DisabledWebhooks) {
+		toSerialize["disabledWebhooks"] = o.DisabledWebhooks
+	}
+	if !IsNil(o.WebhookStatuses) {
+		toSerialize["webhookStatuses"] = o.WebhookStatuses
 	}
 
 	for key, value := range o.AdditionalProperties {
@@ -111,6 +528,17 @@ func (o *GetWebhook200Response) UnmarshalJSON(data []byte) (err error) {
 
 	if err = json.Unmarshal(data, &additionalProperties); err == nil {
 		delete(additionalProperties, "webhookUrl")
+		delete(additionalProperties, "haveDisabledWebhooks")
+		delete(additionalProperties, "circuitState")
+		delete(additionalProperties, "reason")
+		delete(additionalProperties, "fails")
+		delete(additionalProperties, "trips")
+		delete(additionalProperties, "disabledAt")
+		delete(additionalProperties, "firstFailAt")
+		delete(additionalProperties, "lastStatus")
+		delete(additionalProperties, "nextProbeAt")
+		delete(additionalProperties, "disabledWebhooks")
+		delete(additionalProperties, "webhookStatuses")
 		o.AdditionalProperties = additionalProperties
 	}
 

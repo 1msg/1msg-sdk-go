@@ -1,7 +1,7 @@
 /*
 1MSG WhatsApp Business API (Public)
 
-Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** All requests require `token` query parameter with JWT or API key.  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
+Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
 API version: 1.0.0
 Contact: support@1msg.io
@@ -20,9 +20,18 @@ var _ MappedNullable = &SendButtonRequest{}
 
 // SendButtonRequest struct for SendButtonRequest
 type SendButtonRequest struct {
+	// Recipient phone with country code. Use phone or chatId.
 	Phone *string `json:"phone,omitempty"`
+	// Recipient chat ID (`phone@c.us`, group `@g.us`, or BSUID `@lid`). Use phone or chatId.
+	ChatId *string `json:"chatId,omitempty"`
+	// Optional Cloud API wamid to quote
+	QuotedMsgId *string `json:"quotedMsgId,omitempty"`
 	Body *string `json:"body,omitempty"`
 	Footer *string `json:"footer,omitempty"`
+	// Optional interactive header (text/image/video/document)
+	Header map[string]interface{} `json:"header,omitempty"`
+	// Legacy alias for sections (`[{id,title}]`)
+	Buttons []map[string]interface{} `json:"buttons,omitempty"`
 	Sections []SendButtonRequestSectionsInner `json:"sections,omitempty"`
 }
 
@@ -73,6 +82,70 @@ func (o *SendButtonRequest) HasPhone() bool {
 // SetPhone gets a reference to the given string and assigns it to the Phone field.
 func (o *SendButtonRequest) SetPhone(v string) {
 	o.Phone = &v
+}
+
+// GetChatId returns the ChatId field value if set, zero value otherwise.
+func (o *SendButtonRequest) GetChatId() string {
+	if o == nil || IsNil(o.ChatId) {
+		var ret string
+		return ret
+	}
+	return *o.ChatId
+}
+
+// GetChatIdOk returns a tuple with the ChatId field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *SendButtonRequest) GetChatIdOk() (*string, bool) {
+	if o == nil || IsNil(o.ChatId) {
+		return nil, false
+	}
+	return o.ChatId, true
+}
+
+// HasChatId returns a boolean if a field has been set.
+func (o *SendButtonRequest) HasChatId() bool {
+	if o != nil && !IsNil(o.ChatId) {
+		return true
+	}
+
+	return false
+}
+
+// SetChatId gets a reference to the given string and assigns it to the ChatId field.
+func (o *SendButtonRequest) SetChatId(v string) {
+	o.ChatId = &v
+}
+
+// GetQuotedMsgId returns the QuotedMsgId field value if set, zero value otherwise.
+func (o *SendButtonRequest) GetQuotedMsgId() string {
+	if o == nil || IsNil(o.QuotedMsgId) {
+		var ret string
+		return ret
+	}
+	return *o.QuotedMsgId
+}
+
+// GetQuotedMsgIdOk returns a tuple with the QuotedMsgId field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *SendButtonRequest) GetQuotedMsgIdOk() (*string, bool) {
+	if o == nil || IsNil(o.QuotedMsgId) {
+		return nil, false
+	}
+	return o.QuotedMsgId, true
+}
+
+// HasQuotedMsgId returns a boolean if a field has been set.
+func (o *SendButtonRequest) HasQuotedMsgId() bool {
+	if o != nil && !IsNil(o.QuotedMsgId) {
+		return true
+	}
+
+	return false
+}
+
+// SetQuotedMsgId gets a reference to the given string and assigns it to the QuotedMsgId field.
+func (o *SendButtonRequest) SetQuotedMsgId(v string) {
+	o.QuotedMsgId = &v
 }
 
 // GetBody returns the Body field value if set, zero value otherwise.
@@ -139,6 +212,70 @@ func (o *SendButtonRequest) SetFooter(v string) {
 	o.Footer = &v
 }
 
+// GetHeader returns the Header field value if set, zero value otherwise.
+func (o *SendButtonRequest) GetHeader() map[string]interface{} {
+	if o == nil || IsNil(o.Header) {
+		var ret map[string]interface{}
+		return ret
+	}
+	return o.Header
+}
+
+// GetHeaderOk returns a tuple with the Header field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *SendButtonRequest) GetHeaderOk() (map[string]interface{}, bool) {
+	if o == nil || IsNil(o.Header) {
+		return map[string]interface{}{}, false
+	}
+	return o.Header, true
+}
+
+// HasHeader returns a boolean if a field has been set.
+func (o *SendButtonRequest) HasHeader() bool {
+	if o != nil && !IsNil(o.Header) {
+		return true
+	}
+
+	return false
+}
+
+// SetHeader gets a reference to the given map[string]interface{} and assigns it to the Header field.
+func (o *SendButtonRequest) SetHeader(v map[string]interface{}) {
+	o.Header = v
+}
+
+// GetButtons returns the Buttons field value if set, zero value otherwise.
+func (o *SendButtonRequest) GetButtons() []map[string]interface{} {
+	if o == nil || IsNil(o.Buttons) {
+		var ret []map[string]interface{}
+		return ret
+	}
+	return o.Buttons
+}
+
+// GetButtonsOk returns a tuple with the Buttons field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *SendButtonRequest) GetButtonsOk() ([]map[string]interface{}, bool) {
+	if o == nil || IsNil(o.Buttons) {
+		return nil, false
+	}
+	return o.Buttons, true
+}
+
+// HasButtons returns a boolean if a field has been set.
+func (o *SendButtonRequest) HasButtons() bool {
+	if o != nil && !IsNil(o.Buttons) {
+		return true
+	}
+
+	return false
+}
+
+// SetButtons gets a reference to the given []map[string]interface{} and assigns it to the Buttons field.
+func (o *SendButtonRequest) SetButtons(v []map[string]interface{}) {
+	o.Buttons = v
+}
+
 // GetSections returns the Sections field value if set, zero value otherwise.
 func (o *SendButtonRequest) GetSections() []SendButtonRequestSectionsInner {
 	if o == nil || IsNil(o.Sections) {
@@ -184,11 +321,23 @@ func (o SendButtonRequest) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.Phone) {
 		toSerialize["phone"] = o.Phone
 	}
+	if !IsNil(o.ChatId) {
+		toSerialize["chatId"] = o.ChatId
+	}
+	if !IsNil(o.QuotedMsgId) {
+		toSerialize["quotedMsgId"] = o.QuotedMsgId
+	}
 	if !IsNil(o.Body) {
 		toSerialize["body"] = o.Body
 	}
 	if !IsNil(o.Footer) {
 		toSerialize["footer"] = o.Footer
+	}
+	if !IsNil(o.Header) {
+		toSerialize["header"] = o.Header
+	}
+	if !IsNil(o.Buttons) {
+		toSerialize["buttons"] = o.Buttons
 	}
 	if !IsNil(o.Sections) {
 		toSerialize["sections"] = o.Sections

@@ -1,7 +1,7 @@
 /*
 1MSG WhatsApp Business API (Public)
 
-Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** All requests require `token` query parameter with JWT or API key.  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
+Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
 API version: 1.0.0
 Contact: support@1msg.io
@@ -18,8 +18,9 @@ import (
 // checks if the SendTemplateRequestLanguage type satisfies the MappedNullable interface at compile time
 var _ MappedNullable = &SendTemplateRequestLanguage{}
 
-// SendTemplateRequestLanguage struct for SendTemplateRequestLanguage
+// SendTemplateRequestLanguage Template language. Always set `policy` to `deterministic`.
 type SendTemplateRequestLanguage struct {
+	// Must be `deterministic`
 	Policy *string `json:"policy,omitempty"`
 	Code *string `json:"code,omitempty"`
 }
@@ -30,6 +31,8 @@ type SendTemplateRequestLanguage struct {
 // will change when the set of required properties is changed
 func NewSendTemplateRequestLanguage() *SendTemplateRequestLanguage {
 	this := SendTemplateRequestLanguage{}
+	var policy string = "deterministic"
+	this.Policy = &policy
 	return &this
 }
 
@@ -38,6 +41,8 @@ func NewSendTemplateRequestLanguage() *SendTemplateRequestLanguage {
 // but it doesn't guarantee that properties required by API are set
 func NewSendTemplateRequestLanguageWithDefaults() *SendTemplateRequestLanguage {
 	this := SendTemplateRequestLanguage{}
+	var policy string = "deterministic"
+	this.Policy = &policy
 	return &this
 }
 
