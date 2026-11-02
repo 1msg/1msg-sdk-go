@@ -10,7 +10,7 @@
   "api_users.go": "5db3632b5644ea34f21ed4d1c58c898522bcddb0331d9e4fa10b3b6bf0e229d5",
   "api_webhooks.go": "c0a9e0999294f9ca80d5f42cbdea12d667d37ee1f883914cbcecb44b5acaacb8",
   "client.go": "5203e477fa75427cdfce8244f1880560e4b1575f4df704488bbfbbe0a3971eca",
-  "configuration.go": "33916accc1d7a71d8725693046fdce325d36f180f6b527f5e138fbdb71492675",
+  "configuration.go": "af5cd07356e803016743e6b3cd02273b3d50fb0387c9b42c2fba1ecb63620b2e",
   "model_add_template_200_response.go": "bbd58af61dd6aee8d695d8a7bc91e81541bd08233a14fa0bd4276367cdc5a15c",
   "model_add_template_request.go": "ef3c2baaf8cc59c9400f412370644d3ba2728900508b916893fb26dc0b57a30b",
   "model_block_user_request.go": "32d2d7d542b741a151caf2a6263150e580711b4265cabbf28be73af26030d8a2",
