@@ -98,7 +98,7 @@
     "packageName": "onemsgsdk",
     "packageVersion": "1.1.2",
     "withGoMod": true,
-    "moduleName": "github.com/1msg/1msg-sdk-go"
+    "moduleName": "github.com/1msg/1msg-sdk-go/v2"
   },
   "roots": ["*.go"],
   "postprocess": true

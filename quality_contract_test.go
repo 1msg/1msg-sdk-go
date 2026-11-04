@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	sdk "github.com/1msg/1msg-sdk-go"
+	sdk "github.com/1msg/1msg-sdk-go/v2"
 )
 
 // TestSendMessageWireContract exercises the published API against an isolated local server.

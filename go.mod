@@ -1,4 +1,4 @@
-module github.com/1msg/1msg-sdk-go
+module github.com/1msg/1msg-sdk-go/v2
 
 go 1.23
 
