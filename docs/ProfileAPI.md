@@ -77,7 +77,7 @@ Name | Type | Description  | Notes
 
 ## UpdateMe
 
-> map[string]interface{} UpdateMe(ctx).Token(token).UpdateMeRequest(updateMeRequest).Execute()
+> UpdateMe200Response UpdateMe(ctx).Token(token).UpdateMeRequest(updateMeRequest).Execute()
 
 Update profile info
 
@@ -97,7 +97,7 @@ import (
 
 func main() {
 	token := "token_example" // string | JWT token or API key for authorization
-	updateMeRequest := *openapiclient.NewUpdateMeRequest() // UpdateMeRequest |  (optional)
+	updateMeRequest := *openapiclient.NewUpdateMeRequest() // UpdateMeRequest | 
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
@@ -106,7 +106,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error when calling `ProfileAPI.UpdateMe``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
 	}
-	// response from `UpdateMe`: map[string]interface{}
+	// response from `UpdateMe`: UpdateMe200Response
 	fmt.Fprintf(os.Stdout, "Response from `ProfileAPI.UpdateMe`: %v\n", resp)
 }
 ```
@@ -127,7 +127,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-**map[string]interface{}**
+[**UpdateMe200Response**](UpdateMe200Response.md)
 
 ### Authorization
 

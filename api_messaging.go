@@ -3,7 +3,7 @@
 
 Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
-API version: 1.0.0
+API version: 2.0.0
 Contact: support@1msg.io
 */
 
@@ -1993,6 +1993,241 @@ func (a *MessagingAPIService) SendContactExecute(r ApiSendContactRequest) (*Mess
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiSendContactInfoRequest struct {
+	ctx context.Context
+	ApiService *MessagingAPIService
+	token *string
+	sendContactInfoRequest *SendContactInfoRequest
+}
+
+// JWT token or API key for authorization
+func (r ApiSendContactInfoRequest) Token(token string) ApiSendContactInfoRequest {
+	r.token = &token
+	return r
+}
+
+func (r ApiSendContactInfoRequest) SendContactInfoRequest(sendContactInfoRequest SendContactInfoRequest) ApiSendContactInfoRequest {
+	r.sendContactInfoRequest = &sendContactInfoRequest
+	return r
+}
+
+func (r ApiSendContactInfoRequest) Execute() (*MessageSentResponse, *http.Response, error) {
+	return r.ApiService.SendContactInfoExecute(r)
+}
+
+/*
+SendContactInfo Request the user's phone number
+
+Send a service-window interactive message that asks the WhatsApp user to share
+their phone number (`request_contact_info`).
+
+Use this when you only know the user by BSUID (WhatsApp username) and the
+24-hour customer service window is open. Outside that window, create a
+UTILITY or MARKETING template with a `REQUEST_CONTACT_INFO` button
+(`POST /addTemplate`) and send it with `POST /sendTemplate`.
+
+`body` is the text shown above the button (1–1024 characters). WhatsApp
+chooses the button label. This method has no button-text field — do not send
+one.
+
+```json
+{
+  "bsuid": "US.13491208655302741918",
+  "body": "Please share your phone number so we can reach you."
+}
+```
+
+`phone`, `chatId` (`…@c.us`, `…@lid`, `…@username`), or `bsuid` identifies
+the recipient. One of them is enough.
+
+After Meta accepts the send, the outgoing webhook and stored history message
+use this same text as `messages[].body` (`type: interactive`).
+
+When the user taps the button, Meta sends an inbound `contacts` message.
+The sender stays the BSUID. The shared number is on the card with
+`origin: contact_request`. We write that phone onto the existing BSUID
+contact automatically — there is no separate “link phone” call.
+
+```json
+{
+  "contacts": [
+    {
+      "profile": { "name": "Ada", "username": "ada" },
+      "user_id": "US.13491208655302741918"
+    }
+  ],
+  "messages": [
+    {
+      "from_user_id": "US.13491208655302741918",
+      "type": "contacts",
+      "contacts": [
+        {
+          "origin": "contact_request",
+          "phones": [{ "phone": "+1 202-555-0123", "wa_id": "12025550123" }]
+        }
+      ]
+    }
+  ]
+}
+```
+
+The stored inbound message body is the digits (`12025550123`).
+
+If Meta later includes a phone on an ordinary message or status for that
+same BSUID (`wa_id`, `from`, or `recipient_id`, together with `user_id` /
+`recipient_user_id`), that phone is merged onto the same contact. A contact
+card the user forwards (`origin` other than `contact_request`) is someone
+else's number and is not stored as this sender's phone.
+
+
+ @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+ @return ApiSendContactInfoRequest
+*/
+func (a *MessagingAPIService) SendContactInfo(ctx context.Context) ApiSendContactInfoRequest {
+	return ApiSendContactInfoRequest{
+		ApiService: a,
+		ctx: ctx,
+	}
+}
+
+// Execute executes the request
+//  @return MessageSentResponse
+func (a *MessagingAPIService) SendContactInfoExecute(r ApiSendContactInfoRequest) (*MessageSentResponse, *http.Response, error) {
+	var (
+		localVarHTTPMethod   = http.MethodPost
+		localVarPostBody     interface{}
+		formFiles            []formFile
+		localVarReturnValue  *MessageSentResponse
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "MessagingAPIService.SendContactInfo")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/sendContactInfo"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.token == nil {
+		return localVarReturnValue, nil, reportError("token is required and must be specified")
+	}
+
+	parameterAddToHeaderOrQuery(localVarQueryParams, "token", r.token, "form", "")
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{"application/json"}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	// body params
+	localVarPostBody = r.sendContactInfoRequest
+	if r.ctx != nil {
+		// API Key Authentication
+		if auth, ok := r.ctx.Value(ContextAPIKeys).(map[string]APIKey); ok {
+			if apiKey, ok := auth["tokenAuth"]; ok {
+				var key string
+				if apiKey.Prefix != "" {
+					key = apiKey.Prefix + " " + apiKey.Key
+				} else {
+					key = apiKey.Key
+				}
+				localVarQueryParams.Add("token", key)
+			}
+		}
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := io.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = io.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 400 {
+			var v ErrorResponse
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 401 {
+			var v ErrorResponse
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 429 {
+			var v ErrorResponse
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+			return localVarReturnValue, localVarHTTPResponse, newErr
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v ErrorResponse
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+					newErr.error = formatErrorMessage(localVarHTTPResponse.Status, &v)
+					newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiSendCtaUrlRequest struct {
 	ctx context.Context
 	ApiService *MessagingAPIService
@@ -3350,6 +3585,8 @@ type ApiSendMessageRequest struct {
 	quotedMsgId *string
 	chatId *string
 	phone *int32
+	category *string
+	directSend *SendMessageRequestDirectSend
 }
 
 // JWT token or API key for authorization
@@ -3382,6 +3619,17 @@ func (r ApiSendMessageRequest) Phone(phone int32) ApiSendMessageRequest {
 	return r
 }
 
+// Optional Direct Send category. Direct Send is in beta: Meta has not enabled it on every business portfolio. &#x60;utility&#x60; or &#x60;authentication&#x60; enables it. &#x60;authentication&#x60; is part of that beta and is not recommended. Omit or &#x60;service&#x60; keeps a normal service message (and the marketing auto-template outside the 24-hour window). &#x60;marketing&#x60; is rejected. 
+func (r ApiSendMessageRequest) Category(category string) ApiSendMessageRequest {
+	r.category = &category
+	return r
+}
+
+func (r ApiSendMessageRequest) DirectSend(directSend SendMessageRequestDirectSend) ApiSendMessageRequest {
+	r.directSend = &directSend
+	return r
+}
+
 func (r ApiSendMessageRequest) Execute() (*MessageSentResponse, *http.Response, error) {
 	return r.ApiService.SendMessageExecute(r)
 }
@@ -3394,6 +3642,22 @@ The message will be added to the queue for sending and delivered even if the pho
 is disconnected from the Internet or authorization is not passed.
 
 Only one of two parameters is needed to determine the destination - chatId or phone.
+
+Direct Send is in beta. Meta has not enabled it on every business portfolio,
+so `category` and `directSend` are a beta option: watch delivery errors before
+relying on them.
+
+Set `category` to `utility` or `authentication` to send outside the 24-hour
+window as a Meta Direct Send template instead of the 1MSG marketing
+auto-template. `authentication` is part of that beta and is not recommended.
+`directSend.serviceFirst: true` tries a free service message
+first and uses Direct Send only when Meta rejects it because the window is
+closed (131047). `directSend.templateName` is only valid with `utility`
+(`^[a-z0-9_]+$`, max 512). Direct Send text is limited to 1024 characters.
+Without `templateName`, the first unseen phrase may be delivered as Meta's
+onboarding template. A named template does not guarantee delivery — wait for
+webhook errors 131000 or 132021. An open 24-hour window is still billed as
+utility when `category` is set and `serviceFirst` is not true.
 
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
@@ -3466,6 +3730,16 @@ func (a *MessagingAPIService) SendMessageExecute(r ApiSendMessageRequest) (*Mess
 	}
 	if r.phone != nil {
 		parameterAddToHeaderOrQuery(localVarFormParams, "phone", r.phone, "", "")
+	}
+	if r.category != nil {
+		parameterAddToHeaderOrQuery(localVarFormParams, "category", r.category, "", "")
+	}
+	if r.directSend != nil {
+		paramJson, err := parameterToJson(*r.directSend)
+		if err != nil {
+			return localVarReturnValue, nil, err
+		}
+		localVarFormParams.Add("directSend", paramJson)
 	}
 	if r.ctx != nil {
 		// API Key Authentication

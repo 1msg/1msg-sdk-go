@@ -16,7 +16,7 @@ Method | HTTP request | Description
 
 ## CreateGroups
 
-> CreateGroups200Response CreateGroups(ctx).Token(token).Execute()
+> CreateGroups200Response CreateGroups(ctx).Token(token).CreateGroupsRequest(createGroupsRequest).Execute()
 
 Create Group
 
@@ -34,10 +34,11 @@ import (
 
 func main() {
 	token := "token_example" // string | JWT token or API key for authorization
+	createGroupsRequest := *openapiclient.NewCreateGroupsRequest("GroupName_example") // CreateGroupsRequest | 
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.GroupsAPI.CreateGroups(context.Background()).Token(token).Execute()
+	resp, r, err := apiClient.GroupsAPI.CreateGroups(context.Background()).Token(token).CreateGroupsRequest(createGroupsRequest).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `GroupsAPI.CreateGroups``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -59,6 +60,7 @@ Other parameters are passed through a pointer to a apiCreateGroupsRequest struct
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **token** | **string** | JWT token or API key for authorization | 
+ **createGroupsRequest** | [**CreateGroupsRequest**](CreateGroupsRequest.md) |  | 
 
 ### Return type
 
@@ -70,7 +72,7 @@ Name | Type | Description  | Notes
 
 ### HTTP request headers
 
-- **Content-Type**: Not defined
+- **Content-Type**: application/json
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
@@ -80,9 +82,11 @@ Name | Type | Description  | Notes
 
 ## CreateGroupsGroupId
 
-> map[string]interface{} CreateGroupsGroupId(ctx, groupId).Token(token).Execute()
+> map[string]interface{} CreateGroupsGroupId(ctx, groupId).Token(token).CreateGroupsGroupIdRequest(createGroupsGroupIdRequest).Execute()
 
 Update Group Info
+
+
 
 ### Example
 
@@ -99,10 +103,11 @@ import (
 func main() {
 	groupId := "{{createdGroupId}}" // string | 
 	token := "token_example" // string | JWT token or API key for authorization
+	createGroupsGroupIdRequest := *openapiclient.NewCreateGroupsGroupIdRequest() // CreateGroupsGroupIdRequest | 
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.GroupsAPI.CreateGroupsGroupId(context.Background(), groupId).Token(token).Execute()
+	resp, r, err := apiClient.GroupsAPI.CreateGroupsGroupId(context.Background(), groupId).Token(token).CreateGroupsGroupIdRequest(createGroupsGroupIdRequest).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `GroupsAPI.CreateGroupsGroupId``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -129,6 +134,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
  **token** | **string** | JWT token or API key for authorization | 
+ **createGroupsGroupIdRequest** | [**CreateGroupsGroupIdRequest**](CreateGroupsGroupIdRequest.md) |  | 
 
 ### Return type
 
@@ -140,7 +146,7 @@ Name | Type | Description  | Notes
 
 ### HTTP request headers
 
-- **Content-Type**: Not defined
+- **Content-Type**: application/json
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
@@ -290,7 +296,7 @@ Name | Type | Description  | Notes
 
 ## GetGroupsGroupId
 
-> map[string]interface{} GetGroupsGroupId(ctx, groupId).Token(token).Execute()
+> map[string]interface{} GetGroupsGroupId(ctx, groupId).Token(token).Fields(fields).Execute()
 
 Get Group Info
 
@@ -309,10 +315,11 @@ import (
 func main() {
 	groupId := "{{createdGroupId}}" // string | 
 	token := "token_example" // string | JWT token or API key for authorization
+	fields := "fields_example" // string | Comma-separated group fields to return (optional)
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.GroupsAPI.GetGroupsGroupId(context.Background(), groupId).Token(token).Execute()
+	resp, r, err := apiClient.GroupsAPI.GetGroupsGroupId(context.Background(), groupId).Token(token).Fields(fields).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `GroupsAPI.GetGroupsGroupId``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -339,6 +346,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
  **token** | **string** | JWT token or API key for authorization | 
+ **fields** | **string** | Comma-separated group fields to return | 
 
 ### Return type
 
@@ -430,9 +438,11 @@ Name | Type | Description  | Notes
 
 ## ListGroups
 
-> map[string]interface{} ListGroups(ctx).Token(token).Execute()
+> map[string]interface{} ListGroups(ctx).Token(token).Limit(limit).Before(before).After(after).Execute()
 
 Get Groups List
+
+
 
 ### Example
 
@@ -448,10 +458,13 @@ import (
 
 func main() {
 	token := "token_example" // string | JWT token or API key for authorization
+	limit := int32(56) // int32 | Max groups to return (optional)
+	before := "before_example" // string | Cursor for the previous page (optional)
+	after := "after_example" // string | Cursor for the next page (optional)
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.GroupsAPI.ListGroups(context.Background()).Token(token).Execute()
+	resp, r, err := apiClient.GroupsAPI.ListGroups(context.Background()).Token(token).Limit(limit).Before(before).After(after).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `GroupsAPI.ListGroups``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -473,6 +486,9 @@ Other parameters are passed through a pointer to a apiListGroupsRequest struct v
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **token** | **string** | JWT token or API key for authorization | 
+ **limit** | **int32** | Max groups to return | 
+ **before** | **string** | Cursor for the previous page | 
+ **after** | **string** | Cursor for the next page | 
 
 ### Return type
 

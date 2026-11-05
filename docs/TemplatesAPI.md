@@ -13,9 +13,11 @@ Method | HTTP request | Description
 
 ## AddTemplate
 
-> map[string]interface{} AddTemplate(ctx).Token(token).AddTemplateRequest(addTemplateRequest).Execute()
+> AddTemplate200Response AddTemplate(ctx).Token(token).AddTemplateRequest(addTemplateRequest).Execute()
 
 Create message template
+
+
 
 ### Example
 
@@ -40,7 +42,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error when calling `TemplatesAPI.AddTemplate``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
 	}
-	// response from `AddTemplate`: map[string]interface{}
+	// response from `AddTemplate`: AddTemplate200Response
 	fmt.Fprintf(os.Stdout, "Response from `TemplatesAPI.AddTemplate`: %v\n", resp)
 }
 ```
@@ -61,7 +63,7 @@ Name | Type | Description  | Notes
 
 ### Return type
 
-**map[string]interface{}**
+[**AddTemplate200Response**](AddTemplate200Response.md)
 
 ### Authorization
 
@@ -79,9 +81,11 @@ Name | Type | Description  | Notes
 
 ## ListTemplates
 
-> ListTemplates200Response ListTemplates(ctx).Token(token).Execute()
+> ListTemplates200Response ListTemplates(ctx).Token(token).Limit(limit).Offset(offset).Sort(sort).Execute()
 
 Get templates list
+
+
 
 ### Example
 
@@ -97,10 +101,13 @@ import (
 
 func main() {
 	token := "token_example" // string | JWT token or API key for authorization
+	limit := int32(56) // int32 |  (optional)
+	offset := int32(56) // int32 |  (optional)
+	sort := "sort_example" // string | Sort field (`id`, `name`, or `status`) (optional)
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.TemplatesAPI.ListTemplates(context.Background()).Token(token).Execute()
+	resp, r, err := apiClient.TemplatesAPI.ListTemplates(context.Background()).Token(token).Limit(limit).Offset(offset).Sort(sort).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `TemplatesAPI.ListTemplates``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -122,6 +129,9 @@ Other parameters are passed through a pointer to a apiListTemplatesRequest struc
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **token** | **string** | JWT token or API key for authorization | 
+ **limit** | **int32** |  | 
+ **offset** | **int32** |  | 
+ **sort** | **string** | Sort field (&#x60;id&#x60;, &#x60;name&#x60;, or &#x60;status&#x60;) | 
 
 ### Return type
 
@@ -143,9 +153,11 @@ Name | Type | Description  | Notes
 
 ## RemoveTemplate
 
-> map[string]interface{} RemoveTemplate(ctx).Token(token).RequestBody(requestBody).Execute()
+> map[string]interface{} RemoveTemplate(ctx).Token(token).RemoveTemplateRequest(removeTemplateRequest).Execute()
 
 Remove message template
+
+
 
 ### Example
 
@@ -161,11 +173,11 @@ import (
 
 func main() {
 	token := "token_example" // string | JWT token or API key for authorization
-	requestBody := map[string]interface{}{"key": interface{}(123)} // map[string]interface{} |  (optional)
+	removeTemplateRequest := *openapiclient.NewRemoveTemplateRequest("Name_example") // RemoveTemplateRequest | 
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.TemplatesAPI.RemoveTemplate(context.Background()).Token(token).RequestBody(requestBody).Execute()
+	resp, r, err := apiClient.TemplatesAPI.RemoveTemplate(context.Background()).Token(token).RemoveTemplateRequest(removeTemplateRequest).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `TemplatesAPI.RemoveTemplate``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -187,7 +199,7 @@ Other parameters are passed through a pointer to a apiRemoveTemplateRequest stru
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **token** | **string** | JWT token or API key for authorization | 
- **requestBody** | **map[string]interface{}** |  | 
+ **removeTemplateRequest** | [**RemoveTemplateRequest**](RemoveTemplateRequest.md) |  | 
 
 ### Return type
 

@@ -3,7 +3,7 @@
 
 Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
-API version: 1.0.0
+API version: 2.0.0
 Contact: support@1msg.io
 */
 
@@ -50,6 +50,41 @@ AddTemplate Create message template
 
 Create a WABA message template (`name`, `category`, `language`, `components`).
 After create, Meta reviews the template; list it with `GET /templates`.
+
+Authentication OTP templates (`category: AUTHENTICATION`, copy-code / OTP
+button) can later be sent only to a phone number. Meta does not accept a
+BSUID recipient for them (error 131062). If the recipient is known only by
+BSUID — for example they use a username and their phone number is not in
+your Business Portfolio — that template cannot be sent.
+
+To ask a BSUID user for their phone number, add a `REQUEST_CONTACT_INFO`
+button on a `UTILITY` or `MARKETING` template. Do not send `text` on that
+button — WhatsApp sets the label (and rejects a custom one). The button
+also has no send-time parameters: `POST /sendTemplate` does not take a
+button component for it. Inside an open 24-hour window, call
+`POST /sendContactInfo` instead of a template.
+
+When the user shares the number, the inbound webhook is a `contacts`
+message with `origin: contact_request`. The phone is stored on that BSUID
+automatically. See `POST /sendContactInfo`.
+
+```json
+{
+  "name": "request_phone",
+  "category": "UTILITY",
+  "language": "en_US",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "Please share your phone number so we can continue."
+    },
+    {
+      "type": "BUTTONS",
+      "buttons": [{ "type": "REQUEST_CONTACT_INFO" }]
+    }
+  ]
+}
+```
 
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
@@ -535,6 +570,20 @@ Supported `params` button `sub_type` values include: `url`, `quick_reply`,
 Utility template with an ORDER_DETAILS button).
 
 Convenience wrapper with structured fields: `POST /sendOrderDetails`.
+
+Authentication OTP templates (category `AUTHENTICATION`, or a template with
+an OTP / copy-code button) can only be sent to a phone number (`phone` or a
+phone `chatId`). Meta rejects a BSUID `recipient` for these templates with
+error 131062. If the recipient is known only by BSUID — for example they
+use a username and their phone number is not in your Business Portfolio —
+the template cannot be sent.
+
+A `REQUEST_CONTACT_INFO` button (UTILITY or MARKETING only) has no
+send-time parameters. Do not add a button component for it in `params`,
+and do not send button text — WhatsApp sets that label on the template.
+Create the button with `POST /addTemplate` as
+`{ "type": "REQUEST_CONTACT_INFO" }` with no `text`. Inside an open 24-hour
+window, `POST /sendContactInfo` asks for the number without a template.
 
 
  @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().

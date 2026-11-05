@@ -3,7 +3,7 @@
 
 Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
-API version: 1.0.0
+API version: 2.0.0
 Contact: support@1msg.io
 */
 
@@ -33,7 +33,7 @@ type SendTemplateRequest struct {
 	ChatId *string `json:"chatId,omitempty"`
 	// Optional Cloud API wamid to quote
 	QuotedMsgId *string `json:"quotedMsgId,omitempty"`
-	// Force Marketing Messages API (POST marketing_messages). If omitted: auto for MARKETING category when channel has mm_lite_enabled and mm_lite_available service settings. 
+	// Force Marketing Messages API (POST marketing_messages). If omitted, and the channel has mm_lite_enabled and mm_lite_available: MARKETING templates and templates with an unknown category use marketing_messages. An unknown category falls back to messages (mmLiteFallback) when Meta rejects it. Known AUTHENTICATION and UTILITY templates stay on messages. useMMlite:false forces messages. 
 	UseMMlite *bool `json:"useMMlite,omitempty"`
 	// Sets message_activity_sharing on WABA payload. Enables click tracking webhooks. Requires MM Lite path. Ignored on Cloud API fallback. 
 	MessageActivitySharing *bool `json:"messageActivitySharing,omitempty"`

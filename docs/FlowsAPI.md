@@ -20,9 +20,11 @@ Method | HTTP request | Description
 
 ## CreateFlows
 
-> CreateGroups200Response CreateFlows(ctx).Token(token).WabaAccountId(wabaAccountId).Execute()
+> CreateGroups200Response CreateFlows(ctx).Token(token).CreateFlowsRequest(createFlowsRequest).WabaAccountId(wabaAccountId).Execute()
 
 Create Flow
+
+
 
 ### Example
 
@@ -38,11 +40,12 @@ import (
 
 func main() {
 	token := "token_example" // string | JWT token or API key for authorization
+	createFlowsRequest := *openapiclient.NewCreateFlowsRequest("Name_example", []string{"Categories_example"}) // CreateFlowsRequest | 
 	wabaAccountId := "{{wabaAccountId}}" // string |  (optional)
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.FlowsAPI.CreateFlows(context.Background()).Token(token).WabaAccountId(wabaAccountId).Execute()
+	resp, r, err := apiClient.FlowsAPI.CreateFlows(context.Background()).Token(token).CreateFlowsRequest(createFlowsRequest).WabaAccountId(wabaAccountId).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `FlowsAPI.CreateFlows``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -64,6 +67,7 @@ Other parameters are passed through a pointer to a apiCreateFlowsRequest struct 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **token** | **string** | JWT token or API key for authorization | 
+ **createFlowsRequest** | [**CreateFlowsRequest**](CreateFlowsRequest.md) |  | 
  **wabaAccountId** | **string** |  | 
 
 ### Return type
@@ -76,7 +80,7 @@ Name | Type | Description  | Notes
 
 ### HTTP request headers
 
-- **Content-Type**: Not defined
+- **Content-Type**: application/json
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
@@ -512,9 +516,11 @@ Name | Type | Description  | Notes
 
 ## ListFlows
 
-> ListFlows200Response ListFlows(ctx).Token(token).WabaAccountId(wabaAccountId).Execute()
+> ListFlows200Response ListFlows(ctx).Token(token).WabaAccountId(wabaAccountId).Fields(fields).Execute()
 
 List Flows
+
+
 
 ### Example
 
@@ -531,10 +537,11 @@ import (
 func main() {
 	token := "token_example" // string | JWT token or API key for authorization
 	wabaAccountId := "{{wabaAccountId}}" // string |  (optional)
+	fields := "fields_example" // string | Comma-separated Flow fields to return (optional)
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.FlowsAPI.ListFlows(context.Background()).Token(token).WabaAccountId(wabaAccountId).Execute()
+	resp, r, err := apiClient.FlowsAPI.ListFlows(context.Background()).Token(token).WabaAccountId(wabaAccountId).Fields(fields).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `FlowsAPI.ListFlows``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -557,6 +564,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **token** | **string** | JWT token or API key for authorization | 
  **wabaAccountId** | **string** |  | 
+ **fields** | **string** | Comma-separated Flow fields to return | 
 
 ### Return type
 
@@ -578,9 +586,11 @@ Name | Type | Description  | Notes
 
 ## PatchFlowsFlowIdAssets
 
-> PatchFlowsFlowIdAssets200Response PatchFlowsFlowIdAssets(ctx, flowId).Token(token).WabaAccountId(wabaAccountId).Execute()
+> PatchFlowsFlowIdAssets200Response PatchFlowsFlowIdAssets(ctx, flowId).Token(token).PatchFlowsFlowIdAssetsRequest(patchFlowsFlowIdAssetsRequest).WabaAccountId(wabaAccountId).Execute()
 
 Update Flow Structure
+
+
 
 ### Example
 
@@ -597,11 +607,12 @@ import (
 func main() {
 	flowId := "flowId_example" // string | Flow ID
 	token := "token_example" // string | JWT token or API key for authorization
+	patchFlowsFlowIdAssetsRequest := *openapiclient.NewPatchFlowsFlowIdAssetsRequest(map[string]interface{}{"key": interface{}(123)}) // PatchFlowsFlowIdAssetsRequest | 
 	wabaAccountId := "{{wabaAccountId}}" // string |  (optional)
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.FlowsAPI.PatchFlowsFlowIdAssets(context.Background(), flowId).Token(token).WabaAccountId(wabaAccountId).Execute()
+	resp, r, err := apiClient.FlowsAPI.PatchFlowsFlowIdAssets(context.Background(), flowId).Token(token).PatchFlowsFlowIdAssetsRequest(patchFlowsFlowIdAssetsRequest).WabaAccountId(wabaAccountId).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `FlowsAPI.PatchFlowsFlowIdAssets``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -628,6 +639,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
  **token** | **string** | JWT token or API key for authorization | 
+ **patchFlowsFlowIdAssetsRequest** | [**PatchFlowsFlowIdAssetsRequest**](PatchFlowsFlowIdAssetsRequest.md) |  | 
  **wabaAccountId** | **string** |  | 
 
 ### Return type
@@ -640,7 +652,7 @@ Name | Type | Description  | Notes
 
 ### HTTP request headers
 
-- **Content-Type**: Not defined
+- **Content-Type**: application/json
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
@@ -650,9 +662,11 @@ Name | Type | Description  | Notes
 
 ## PatchFlowsFlowIdMetadata
 
-> map[string]interface{} PatchFlowsFlowIdMetadata(ctx, flowId).Token(token).WabaAccountId(wabaAccountId).Execute()
+> map[string]interface{} PatchFlowsFlowIdMetadata(ctx, flowId).Token(token).PatchFlowsFlowIdMetadataRequest(patchFlowsFlowIdMetadataRequest).WabaAccountId(wabaAccountId).Execute()
 
 Update Flow Metadata
+
+
 
 ### Example
 
@@ -669,11 +683,12 @@ import (
 func main() {
 	flowId := "flowId_example" // string | Flow ID
 	token := "token_example" // string | JWT token or API key for authorization
+	patchFlowsFlowIdMetadataRequest := *openapiclient.NewPatchFlowsFlowIdMetadataRequest() // PatchFlowsFlowIdMetadataRequest | 
 	wabaAccountId := "{{wabaAccountId}}" // string |  (optional)
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.FlowsAPI.PatchFlowsFlowIdMetadata(context.Background(), flowId).Token(token).WabaAccountId(wabaAccountId).Execute()
+	resp, r, err := apiClient.FlowsAPI.PatchFlowsFlowIdMetadata(context.Background(), flowId).Token(token).PatchFlowsFlowIdMetadataRequest(patchFlowsFlowIdMetadataRequest).WabaAccountId(wabaAccountId).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `FlowsAPI.PatchFlowsFlowIdMetadata``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -700,6 +715,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
  **token** | **string** | JWT token or API key for authorization | 
+ **patchFlowsFlowIdMetadataRequest** | [**PatchFlowsFlowIdMetadataRequest**](PatchFlowsFlowIdMetadataRequest.md) |  | 
  **wabaAccountId** | **string** |  | 
 
 ### Return type
@@ -712,7 +728,7 @@ Name | Type | Description  | Notes
 
 ### HTTP request headers
 
-- **Content-Type**: Not defined
+- **Content-Type**: application/json
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)

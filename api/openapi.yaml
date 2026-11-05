@@ -9,12 +9,14 @@ info:
 
     This is the API exposed to end customers via platform.1msg.io
 
-    **Authentication:** All requests require `token` query parameter with JWT or API key.
+    **Authentication:** Pass the channel token in **one** place. The API checks
+    JSON body (`token`), then query string (`?token=`), then
+    `Authorization: Bearer` header (preferred in production).
 
     **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start
     **API Docs:** https://docs.1msg.io/
   title: 1MSG WhatsApp Business API (Public)
-  version: 1.0.0
+  version: 2.0.0
 servers:
 - description: Production
   url: https://api.1msg.io
@@ -41,7 +43,12 @@ tags:
   name: Flows
 - description: Get and manage message templates
   name: Templates
-- description: Client webhook URL configuration
+- description: |
+    Client webhook URL configuration (`GET`/`POST /webhook`).
+
+    Auto-disable is **per URL**, not per channel. Prefer `webhookStatuses` on
+    `GET /webhook` / `GET /settings`. Top-level `haveDisabledWebhooks` means at
+    least one configured URL is sticky-disabled; live URLs still receive events.
   name: Webhooks
 - description: |
     WhatsApp Calling API (beta) — VoIP **signaling** proxy.
@@ -84,7 +91,9 @@ tags:
 paths:
   /me:
     get:
-      description: Get WhatsApp Business Account profile information
+      description: |
+        Return the WhatsApp Business profile for this channel: About, address,
+        description, email, phone, websites, industry (`vertical`), and profile photo URL.
       operationId: getMe
       parameters:
       - description: JWT token or API key for authorization
@@ -135,15 +144,20 @@ paths:
       requestBody:
         content:
           application/json:
+            example:
+              about: Available 9–18
+              email: support@example.com
             schema:
               $ref: "#/components/schemas/updateMe_request"
+        required: true
       responses:
         "200":
           content:
             application/json:
+              example:
+                result: success
               schema:
-                additionalProperties: true
-                type: object
+                $ref: "#/components/schemas/updateMe_200_response"
           description: Profile updated
         "401":
           content:
@@ -172,7 +186,20 @@ paths:
         \ an Open Session). \nThe message will be added to the queue for sending and\
         \ delivered even if the phone \nis disconnected from the Internet or authorization\
         \ is not passed.\n\nOnly one of two parameters is needed to determine the\
-        \ destination - chatId or phone.\n"
+        \ destination - chatId or phone.\n\nDirect Send is in beta. Meta has not enabled\
+        \ it on every business portfolio,\nso `category` and `directSend` are a beta\
+        \ option: watch delivery errors before\nrelying on them.\n\nSet `category`\
+        \ to `utility` or `authentication` to send outside the 24-hour\nwindow as\
+        \ a Meta Direct Send template instead of the 1MSG marketing\nauto-template.\
+        \ `authentication` is part of that beta and is not recommended.\n`directSend.serviceFirst:\
+        \ true` tries a free service message\nfirst and uses Direct Send only when\
+        \ Meta rejects it because the window is\nclosed (131047). `directSend.templateName`\
+        \ is only valid with `utility`\n(`^[a-z0-9_]+$`, max 512). Direct Send text\
+        \ is limited to 1024 characters.\nWithout `templateName`, the first unseen\
+        \ phrase may be delivered as Meta's\nonboarding template. A named template\
+        \ does not guarantee delivery — wait for\nwebhook errors 131000 or 132021.\
+        \ An open 24-hour window is still billed as\nutility when `category` is set\
+        \ and `serviceFirst` is not true.\n"
       operationId: sendMessage
       parameters:
       - description: JWT token or API key for authorization
@@ -357,6 +384,20 @@ paths:
       - Messaging
   /sendContact:
     post:
+      description: |
+        Send a WhatsApp contact card.
+
+        Preferred simple body (legacy-compatible):
+
+        ```json
+        {
+          "phone": "79001234567",
+          "contact": { "name": "Lida", "phone": "+79181976551" }
+        }
+        ```
+
+        Cloud API shape also works: `contacts` is an array of objects with
+        `name.formatted_name` and `phones[].phone` (E.164 string, **not** a timestamp).
       operationId: sendContact
       parameters:
       - description: JWT token or API key for authorization
@@ -372,26 +413,9 @@ paths:
           application/json:
             example:
               phone: "{{testPhone}}"
-              contacts:
-              - name:
-                  formatted_name: John Doe
-                  first_name: John
-                  last_name: Doe
-                  middle_name: ""
-                  suffix: ""
-                  prefix: ""
-                birthday: ""
-                addresses: []
-                emails: []
-                org:
-                  company: ""
-                  department: ""
-                  title: ""
-                phones:
-                - phone: "+1234567890"
-                  type: HOME
-                  wa_id: ""
-                urls: []
+              contact:
+                name: John Doe
+                phone: "+1234567890"
             schema:
               $ref: "#/components/schemas/sendContact_request"
       responses:
@@ -604,6 +628,121 @@ paths:
       summary: Send Location Request Message
       tags:
       - Messaging
+  /sendContactInfo:
+    post:
+      description: |
+        Send a service-window interactive message that asks the WhatsApp user to share
+        their phone number (`request_contact_info`).
+
+        Use this when you only know the user by BSUID (WhatsApp username) and the
+        24-hour customer service window is open. Outside that window, create a
+        UTILITY or MARKETING template with a `REQUEST_CONTACT_INFO` button
+        (`POST /addTemplate`) and send it with `POST /sendTemplate`.
+
+        `body` is the text shown above the button (1–1024 characters). WhatsApp
+        chooses the button label. This method has no button-text field — do not send
+        one.
+
+        ```json
+        {
+          "bsuid": "US.13491208655302741918",
+          "body": "Please share your phone number so we can reach you."
+        }
+        ```
+
+        `phone`, `chatId` (`…@c.us`, `…@lid`, `…@username`), or `bsuid` identifies
+        the recipient. One of them is enough.
+
+        After Meta accepts the send, the outgoing webhook and stored history message
+        use this same text as `messages[].body` (`type: interactive`).
+
+        When the user taps the button, Meta sends an inbound `contacts` message.
+        The sender stays the BSUID. The shared number is on the card with
+        `origin: contact_request`. We write that phone onto the existing BSUID
+        contact automatically — there is no separate “link phone” call.
+
+        ```json
+        {
+          "contacts": [
+            {
+              "profile": { "name": "Ada", "username": "ada" },
+              "user_id": "US.13491208655302741918"
+            }
+          ],
+          "messages": [
+            {
+              "from_user_id": "US.13491208655302741918",
+              "type": "contacts",
+              "contacts": [
+                {
+                  "origin": "contact_request",
+                  "phones": [{ "phone": "+1 202-555-0123", "wa_id": "12025550123" }]
+                }
+              ]
+            }
+          ]
+        }
+        ```
+
+        The stored inbound message body is the digits (`12025550123`).
+
+        If Meta later includes a phone on an ordinary message or status for that
+        same BSUID (`wa_id`, `from`, or `recipient_id`, together with `user_id` /
+        `recipient_user_id`), that phone is merged onto the same contact. A contact
+        card the user forwards (`origin` other than `contact_request`) is someone
+        else's number and is not stored as this sender's phone.
+      operationId: sendContactInfo
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            example:
+              bsuid: US.13491208655302741918
+              body: Please share your phone number so we can reach you.
+            schema:
+              $ref: "#/components/schemas/sendContactInfo_request"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageSentResponse"
+          description: Message sent successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid request parameters
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Rate limit exceeded
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Request the user's phone number
+      tags:
+      - Messaging
   /sendFlow:
     post:
       description: "Send Interactive WhatsApp Flow message to an existing chat. (Only\
@@ -728,8 +867,20 @@ paths:
         \ to sending a template. However, in this case you must \nexplicitly specify\
         \ all elements that are created in advance when working with templates. This\
         \ is because the message \nis sent without using a template.\n\nIn /sendCarousel,\
-        \ for sending a Catalog Carousel there can be either 1 URL button or one or\
-        \ more quick reply buttons.\n"
+        \ for a Catalog Carousel there can be either 1 URL button or one or more quick\
+        \ reply buttons.\n\nPrefer the simple `cards` array (2–10 cards). Each card\
+        \ needs a header media/product\nplus a CTA URL or quick-reply buttons. Example:\n\
+        \n```json\n{\n  \"phone\": \"79001234567\",\n  \"body\": \"Pick a product\"\
+        ,\n  \"cards\": [\n    {\n      \"header\": { \"type\": \"image\", \"image\"\
+        : { \"link\": \"https://example.com/1.jpg\" } },\n      \"body\": { \"text\"\
+        : \"Card one\" },\n      \"type\": \"cta_url\",\n      \"action\": { \"name\"\
+        : \"cta_url\", \"parameters\": { \"url\": \"https://example.com/p1\", \"display_text\"\
+        : \"Open\" } }\n    },\n    {\n      \"header\": { \"type\": \"image\", \"\
+        image\": { \"link\": \"https://example.com/2.jpg\" } },\n      \"body\": {\
+        \ \"text\": \"Card two\" },\n      \"type\": \"cta_url\",\n      \"action\"\
+        : { \"name\": \"cta_url\", \"parameters\": { \"url\": \"https://example.com/p2\"\
+        , \"display_text\": \"Open\" } }\n    }\n  ]\n}\n```\n\n`params` with a `CAROUSEL`\
+        \ component is the template-like alternative.\n"
       operationId: sendCarousel
       parameters:
       - description: JWT token or API key for authorization
@@ -784,6 +935,11 @@ paths:
       - Messaging
   /sendProduct:
     post:
+      description: |
+        Send a single catalog product or a product list.
+        Destination is `chatId` or `phone`. `action` is required:
+        - single product: `{ "catalog_id": "...", "product_retailer_id": "..." }`
+        - product list: `{ "catalog_id": "...", "sections": [{ "title": "...", "product_items": [{ "product_retailer_id": "..." }] }] }`
       operationId: sendProduct
       parameters:
       - description: JWT token or API key for authorization
@@ -797,9 +953,15 @@ paths:
       requestBody:
         content:
           application/json:
+            example:
+              chatId: 12020721369@c.us
+              body: Have a look
+              action:
+                catalog_id: "448008021021719"
+                product_retailer_id: "0001"
             schema:
-              additionalProperties: true
-              type: object
+              $ref: "#/components/schemas/sendProduct_request"
+        required: true
       responses:
         "200":
           content:
@@ -837,28 +999,44 @@ paths:
   /sendTemplate:
     post:
       description: |
-        Send a WhatsApp template message (works outside the 24-hour session window).
+        Send a WhatsApp **template** message (works outside the 24-hour session window).
+
+        Use this tool — not `send_message` — when the 24h session is closed.
+
+        `params` MUST be Cloud API **component objects**, never a flat list of strings
+        and never the old On-Prem `hsm` / `localizable_params` format.
+
+        Example body variable `{{1}}`:
+
+        ```json
+        {
+          "type": "body",
+          "parameters": [{ "type": "text", "text": "Ivan" }]
+        }
+        ```
+
+        Do not send `"type": "hsm"` and do not send `params: ["Ivan", "123"]`.
 
         Supported `params` button `sub_type` values include: `url`, `quick_reply`,
         `copy_code` / `coupon_code`, `catalog`, `flow`, `limited_time_offer`, and
         **`order_details`** (WhatsApp Payments **India only** — requires an approved
         Utility template with an ORDER_DETAILS button).
 
-        For India order/invoice payments outside 24h, include a button component:
-
-        ```json
-        {
-          "type": "button",
-          "sub_type": "order_details",
-          "index": 0,
-          "parameters": [{
-            "type": "action",
-            "action": { "order_details": { "reference_id": "...", "currency": "INR", "order": {} } }
-          }]
-        }
-        ```
-
         Convenience wrapper with structured fields: `POST /sendOrderDetails`.
+
+        Authentication OTP templates (category `AUTHENTICATION`, or a template with
+        an OTP / copy-code button) can only be sent to a phone number (`phone` or a
+        phone `chatId`). Meta rejects a BSUID `recipient` for these templates with
+        error 131062. If the recipient is known only by BSUID — for example they
+        use a username and their phone number is not in your Business Portfolio —
+        the template cannot be sent.
+
+        A `REQUEST_CONTACT_INFO` button (UTILITY or MARKETING only) has no
+        send-time parameters. Do not add a button component for it in `params`,
+        and do not send button text — WhatsApp sets that label on the template.
+        Create the button with `POST /addTemplate` as
+        `{ "type": "REQUEST_CONTACT_INFO" }` with no `text`. Inside an open 24-hour
+        window, `POST /sendContactInfo` asks for the number without a template.
       operationId: sendTemplate
       parameters:
       - description: JWT token or API key for authorization
@@ -878,8 +1056,12 @@ paths:
                 policy: deterministic
                 code: ru
               namespace: 41123797_e45e_4f06_a2fa_443b27c6f5ec
-              params: []
               phone: "{{testPhone}}"
+              params:
+              - type: body
+                parameters:
+                - type: text
+                  text: Ivan
             schema:
               $ref: "#/components/schemas/sendTemplate_request"
       responses:
@@ -895,6 +1077,9 @@ paths:
       - Templates
   /messages:
     get:
+      description: |
+        List stored chat history for this channel (requires history storage).
+        Filter with `chatId`, `limit`, `last`, message numbers, or time bounds.
       operationId: listMessages
       parameters:
       - description: JWT token or API key for authorization
@@ -902,6 +1087,69 @@ paths:
         in: query
         name: token
         required: true
+        schema:
+          type: string
+        style: form
+      - description: "Filter messages for one chat (`phone@c.us`, group `@g.us`, or\
+          \ BSUID `@lid`)"
+        explode: true
+        in: query
+        name: chatId
+        required: false
+        schema:
+          type: string
+        style: form
+      - description: Max rows to return (default 100)
+        explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+        style: form
+      - description: "If true, return the latest messages (DESC). Default false."
+        explode: true
+        in: query
+        name: last
+        required: false
+        schema:
+          type: boolean
+        style: form
+      - explode: true
+        in: query
+        name: lastMessageNumber
+        required: false
+        schema:
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: firstMessageNumber
+        required: false
+        schema:
+          type: integer
+        style: form
+      - description: Unix timestamp lower bound
+        explode: true
+        in: query
+        name: min_time
+        required: false
+        schema:
+          type: integer
+        style: form
+      - description: Unix timestamp upper bound
+        explode: true
+        in: query
+        name: max_time
+        required: false
+        schema:
+          type: integer
+        style: form
+      - description: Filter by stored message id
+        explode: true
+        in: query
+        name: msgId
+        required: false
         schema:
           type: string
         style: form
@@ -962,6 +1210,12 @@ paths:
       - Messaging
   /uploadMedia:
     post:
+      description: |
+        Upload a file to WhatsApp media storage and get a numeric `mediaId`
+        for later use with `send_file` / `send_sticker` (`mediaId` field, not `body`).
+
+        Pass the file as `body` **or** `url` — an HTTP(S) URL or a base64 data URI.
+        The `mediaId` in the response is a numeric string (keep it as a string).
       operationId: createUploadMedia
       parameters:
       - description: JWT token or API key for authorization
@@ -975,11 +1229,17 @@ paths:
       requestBody:
         content:
           application/json:
+            example:
+              body: https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf
             schema:
-              additionalProperties: true
-              type: object
+              $ref: "#/components/schemas/createUploadMedia_request"
+        required: true
       responses:
         "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/createUploadMedia_200_response"
           description: OK
       summary: Upload media
       tags:
@@ -1642,7 +1902,15 @@ paths:
       - Messaging
   /status:
     get:
-      description: Returns WhatsApp Business API client connection status.
+      description: |
+        Return WhatsApp Cloud API connection status for this channel (`connected`
+        when the number can send). May include `accountStatus`, messaging limit,
+        and MM Lite availability.
+
+        Optional `health_status_warning` appears only when Meta Graph health could
+        not be loaded and a soft `connected` response is returned. Omitted on the
+        normal path and when health details are not applicable for the channel —
+        never an internal provider/transport name.
       operationId: getStatus
       parameters:
       - description: JWT token or API key for authorization
@@ -1657,9 +1925,13 @@ paths:
         "200":
           content:
             application/json:
+              example:
+                isCloud: true
+                status: connected
+                accountStatus: authenticated
+                mm_lite_available: false
               schema:
-                additionalProperties: true
-                type: object
+                $ref: "#/components/schemas/getStatus_200_response"
           description: Channel status
         "401":
           content:
@@ -1676,10 +1948,121 @@ paths:
       summary: Get channel status
       tags:
       - Channel
+  /settings:
+    get:
+      description: |
+        Return channel settings: webhook URL(s), delivery flags, and analytics toggles.
+
+        Auto-disable / circuit state matches `GET /webhook`. **Prefer `webhookStatuses`**
+        (one row per configured URL). The breaker is per URL, not per channel.
+
+        Channel-level `haveDisabledWebhooks` is `true` when **at least one** URL in
+        `webhookUrl` is sticky auto-disabled — not "the channel is dead". Live URLs
+        still receive events. Top-level `circuitState` / `reason` / `fails` / `trips`
+        are a compatibility summary of one URL (first sticky-disabled, else first
+        configured).
+
+        This is the same `GET /settings` endpoint as the REST API (previously missing from MCP).
+      operationId: listSettings
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              example:
+                webhookUrl: https://example.com/webhook
+                guaranteedHooks: false
+                ackNotificationsOn: true
+                rawHooks: false
+                haveDisabledWebhooks: false
+                circuitState: ok
+                disabledWebhooks: []
+                webhookStatuses:
+                - url: https://example.com/webhook
+                  circuitState: ok
+              schema:
+                $ref: "#/components/schemas/listSettings_200_response"
+          description: Current settings
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Get channel settings
+      tags:
+      - Channel
+    post:
+      description: |
+        Update channel settings. Only send fields you want to change.
+
+        `webhookUrl` **replaces** the stored list (one URL string, or up to 5 URLs as an array).
+        Passing an empty value clears webhooks. Repeating the same URL(s) also clears a
+        sticky auto-disable. With several URLs, send the complete array to re-enable one
+        of them — omitting a URL removes it from the channel.
+      operationId: createSettings
+      parameters:
+      - description: JWT token or API key for authorization
+        explode: true
+        in: query
+        name: token
+        required: true
+        schema:
+          type: string
+        style: form
+      requestBody:
+        content:
+          application/json:
+            example:
+              webhookUrl: https://example.com/webhook
+              ackNotificationsOn: true
+            schema:
+              $ref: "#/components/schemas/createSettings_request"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+          description: Updated settings
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Invalid or missing authentication token
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Internal server error
+      summary: Update channel settings
+      tags:
+      - Channel
   /commerce:
     get:
       description: |
         Returns catalog/cart commerce settings for the channel.
+
+        Fails with a provider error when the WABA has no catalog linked — that is an
+        API/account limitation, not an MCP schema bug.
 
         - `is_catalog_visible` — show catalog storefront icon (`true`) or hide it (`false`).
         - `is_cart_enabled` — enable cart (`true`) or disable it (`false`).
@@ -1884,7 +2267,39 @@ paths:
       - Channel
   /webhook:
     get:
-      description: Returns the configured client webhook URL for this channel.
+      description: |
+        Return the webhook URL(s) currently configured for this channel, plus delivery
+        status for each URL.
+
+        `webhookUrl` is a string when a single URL is set, an array of strings when
+        multiple URLs are configured, or `null` if none is set.
+
+        **Prefer `webhookStatuses`.** The circuit breaker is per URL, not per channel.
+        If 1 of 4 URLs is sticky-disabled, that URL is skipped; the other three still
+        receive events. Send/receive are not affected.
+
+        Channel-level `haveDisabledWebhooks`, `circuitState`, `reason`, `fails`,
+        `trips`, and timestamps are a compatibility summary of **one** URL (the first
+        sticky-disabled URL, else the first configured URL). They are not "the channel
+        is dead".
+
+        - `haveDisabledWebhooks` — `true` when **at least one** URL in `webhookUrl` is
+          sticky auto-disabled. Live URLs still get events.
+        - `circuitState` — compressed scalar for that same primary URL:
+          `ok` | `degraded` | `open` | `half_open` | `disabled`.
+        - `disabledWebhooks` — currently configured URLs that are sticky-disabled
+          (subset of `webhookUrl`).
+        - `webhookStatuses` — one row per currently configured URL. Use this array
+          to see which endpoints are live vs skipped.
+        - `fails` / `trips` / `firstFailAt` — **diagnostics for support**, not product
+          UI. `fails` = failures in a rolling ~10 minute window (not lifetime).
+          `trips` = failed recovery probes on the 15 min → 1 h → 6 h schedule (sticky
+          disable after 3). Clients can ignore these and use `webhookStatuses` +
+          `disabledWebhooks` only.
+
+        Sticky disable skips delivery; it does not unconfigure the URL (it stays in
+        `webhookUrl`). Re-enable with `POST /webhook` or `POST /settings`. Those
+        endpoints **replace** the whole list — with multiple URLs, send the full array.
       operationId: getWebhook
       parameters:
       - description: JWT token or API key for authorization
@@ -1899,9 +2314,45 @@ paths:
         "200":
           content:
             application/json:
+              examples:
+                healthy:
+                  summary: Single URL delivering
+                  value:
+                    webhookUrl: https://example.com/webhook
+                    haveDisabledWebhooks: false
+                    circuitState: ok
+                    disabledWebhooks: []
+                    webhookStatuses:
+                    - url: https://example.com/webhook
+                      circuitState: ok
+                mixed:
+                  summary: One of several URLs sticky-disabled
+                  value:
+                    webhookUrl:
+                    - https://live.example.com/webhook
+                    - https://down.example.com/webhook
+                    haveDisabledWebhooks: true
+                    circuitState: disabled
+                    reason: http_404
+                    fails: 1
+                    trips: 3
+                    disabledWebhooks:
+                    - url: https://down.example.com/webhook
+                      reason: http_404
+                      state: disabled
+                      fails: 1
+                      trips: 3
+                    webhookStatuses:
+                    - url: https://live.example.com/webhook
+                      circuitState: ok
+                    - url: https://down.example.com/webhook
+                      circuitState: disabled
+                      reason: http_404
+                      fails: 1
+                      trips: 3
               schema:
                 $ref: "#/components/schemas/getWebhook_200_response"
-          description: Current webhook URL
+          description: Current webhook URL and per-URL circuit status
         "401":
           content:
             application/json:
@@ -1919,12 +2370,21 @@ paths:
       - Webhooks
     post:
       description: |
-        Configure the client webhook URL for inbound events.
+        Set the client webhook URL that receives inbound events for this channel.
 
-        WhatsApp **Calling** events (`field=calls`) are forwarded as passthrough
-        payloads with `type: "calls"` and `instanceId` (connect / status / terminate).
-        Call permission replies arrive on the normal messages path
-        (`call_permission_reply`). Details: **Calling** tag.
+        **Replaces** the stored webhook list (it does not append). To deliver the same
+        events to several endpoints, pass an array in `webhookUrl` (max 5) or use
+        `POST /settings`. With several URLs already configured, posting only the
+        disabled URL **drops the others** — send the complete array to re-enable one
+        of many.
+
+        Incoming payloads include messages, delivery ACKs, group updates, coexistence
+        echoes, and calling events. WhatsApp Calling payloads (`type: "calls"`) are
+        documented under the **Calling** tag. Call permission replies arrive on the
+        normal messages path (`call_permission_reply`).
+
+        Repeating `POST /webhook` with the same URL(s) clears an auto-disable (self-serve
+        re-enable). Send/receive are not affected by webhook auto-disable.
       operationId: setWebhook
       parameters:
       - description: JWT token or API key for authorization
@@ -1938,15 +2398,29 @@ paths:
       requestBody:
         content:
           application/json:
+            examples:
+              single:
+                summary: Single URL
+                value:
+                  webhookUrl: https://example.com/webhook
+              multiple:
+                summary: Several URLs (replaces the list)
+                value:
+                  webhookUrl:
+                  - https://example.com/webhook
+                  - https://backup.example.com/webhook
             schema:
-              $ref: "#/components/schemas/getWebhook_200_response"
+              $ref: "#/components/schemas/setWebhook_request"
+        required: true
       responses:
         "200":
           content:
             application/json:
+              example:
+                set: true
+                webhookUrl: https://example.com/webhook
               schema:
-                additionalProperties: true
-                type: object
+                $ref: "#/components/schemas/setWebhook_200_response"
           description: Webhook configured
         "401":
           content:
@@ -2134,7 +2608,10 @@ paths:
         See the **Calling** tag overview for the full outbound flow and CPR limits.
 
         Trial / `subscriptionBlocked` → **403** plain text.
-        Upstream failures often return HTTP 200 with `{ "response": { "error": "..." } }`.
+        Upstream failures often return HTTP 200 with `{ "response": { "error": "<upstream message>" } }`.
+        `Invalid API KEY` is used only when Meta/360 body actually indicates an
+        invalid API key or token. Other upstream 401s (notably call permission
+        `138006`) pass through `error.message` / `error_user_msg`.
       operationId: initiateCall
       parameters:
       - description: JWT token or API key for authorization
@@ -2213,6 +2690,16 @@ paths:
                   value:
                     response:
                       error: Calling not enabled
+                callPermissionDenied:
+                  summary: "Meta 138006 (upstream 401, not Invalid API KEY)"
+                  value:
+                    response:
+                      error: No approved call permission from the recipient
+                invalidApiKey:
+                  summary: Real invalid D360/Meta token
+                  value:
+                    response:
+                      error: Invalid API KEY
               schema:
                 $ref: "#/components/schemas/InitiateCallResponse"
           description: "Call action result from upstream, or legacy error wrapper"
@@ -2233,6 +2720,8 @@ paths:
       - Calling
   /groups:
     get:
+      description: "List WhatsApp groups for this channel. Paginate with `limit`,\
+        \ `before`, and `after`."
       operationId: listGroups
       parameters:
       - description: JWT token or API key for authorization
@@ -2240,6 +2729,30 @@ paths:
         in: query
         name: token
         required: true
+        schema:
+          type: string
+        style: form
+      - description: Max groups to return
+        explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+        style: form
+      - description: Cursor for the previous page
+        explode: true
+        in: query
+        name: before
+        required: false
+        schema:
+          type: string
+        style: form
+      - description: Cursor for the next page
+        explode: true
+        in: query
+        name: after
+        required: false
         schema:
           type: string
         style: form
@@ -2265,6 +2778,12 @@ paths:
         schema:
           type: string
         style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/createGroups_request"
+        required: true
       responses:
         "200":
           content:
@@ -2324,6 +2843,14 @@ paths:
         schema:
           type: string
         style: form
+      - description: Comma-separated group fields to return
+        explode: true
+        in: query
+        name: fields
+        required: false
+        schema:
+          type: string
+        style: form
       responses:
         "200":
           content:
@@ -2336,6 +2863,9 @@ paths:
       tags:
       - Groups
     post:
+      description: |
+        Update group subject, description, and/or profile picture.
+        Path `groupId` is the WABA group id (without `@g.us`).
       operationId: createGroupsGroupId
       parameters:
       - example: "{{createdGroupId}}"
@@ -2354,6 +2884,15 @@ paths:
         schema:
           type: string
         style: form
+      requestBody:
+        content:
+          application/json:
+            example:
+              subject: Support team
+              description: Customer support
+            schema:
+              $ref: "#/components/schemas/createGroupsGroupId_request"
+        required: true
       responses:
         "200":
           content:
@@ -2514,6 +3053,9 @@ paths:
       - Flows
   /flows:
     get:
+      description: |
+        List WhatsApp Flows for the WABA.
+        Currently returns HTTP 501 until the Meta Graph Flows rewrite is available.
       operationId: listFlows
       parameters:
       - description: JWT token or API key for authorization
@@ -2532,6 +3074,14 @@ paths:
         schema:
           type: string
         style: form
+      - description: Comma-separated Flow fields to return
+        explode: true
+        in: query
+        name: fields
+        required: false
+        schema:
+          type: string
+        style: form
       responses:
         "200":
           content:
@@ -2539,10 +3089,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/listFlows_200_response"
           description: OK
+        "501":
+          description: WhatsApp Flows are not available on this channel yet
       summary: List Flows
       tags:
       - Flows
     post:
+      description: |
+        Create a WhatsApp Flow (`name` + `categories` required).
+        Currently returns HTTP 501 until the Meta Graph Flows rewrite is available.
       operationId: createFlows
       parameters:
       - description: JWT token or API key for authorization
@@ -2561,6 +3116,17 @@ paths:
         schema:
           type: string
         style: form
+      requestBody:
+        content:
+          application/json:
+            example:
+              name: lead_form
+              categories:
+              - LEAD_GENERATION
+              publish: false
+            schema:
+              $ref: "#/components/schemas/createFlows_request"
+        required: true
       responses:
         "200":
           content:
@@ -2568,6 +3134,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/createGroups_200_response"
           description: OK
+        "501":
+          description: WhatsApp Flows are not available on this channel yet
       summary: Create Flow
       tags:
       - Flows
@@ -2648,6 +3216,9 @@ paths:
       - Flows
   /flows/{flowId}/metadata:
     patch:
+      description: |
+        Update Flow `name`, `categories`, and/or `endpointUri`.
+        Currently returns HTTP 501 until the Meta Graph Flows rewrite is available.
       operationId: patchFlowsFlowIdMetadata
       parameters:
       - description: Flow ID
@@ -2674,6 +3245,12 @@ paths:
         schema:
           type: string
         style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/patchFlowsFlowIdMetadata_request"
+        required: true
       responses:
         "200":
           content:
@@ -2682,11 +3259,16 @@ paths:
                 additionalProperties: true
                 type: object
           description: OK
+        "501":
+          description: WhatsApp Flows are not available on this channel yet
       summary: Update Flow Metadata
       tags:
       - Flows
   /flows/{flowId}/assets:
     patch:
+      description: |
+        Replace the Flow JSON document (`flowJson`).
+        Currently returns HTTP 501 until the Meta Graph Flows rewrite is available.
       operationId: patchFlowsFlowIdAssets
       parameters:
       - description: Flow ID
@@ -2713,6 +3295,12 @@ paths:
         schema:
           type: string
         style: form
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/patchFlowsFlowIdAssets_request"
+        required: true
       responses:
         "200":
           content:
@@ -2720,6 +3308,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/patchFlowsFlowIdAssets_200_response"
           description: OK
+        "501":
+          description: WhatsApp Flows are not available on this channel yet
       summary: Update Flow Structure
       tags:
       - Flows
@@ -2842,6 +3432,8 @@ paths:
       - Flows
   /templates:
     get:
+      description: "List message templates. Paginate with `limit` / `offset`; sort\
+        \ by `id`, `name`, or `status`."
       operationId: listTemplates
       parameters:
       - description: JWT token or API key for authorization
@@ -2850,6 +3442,32 @@ paths:
         name: token
         required: true
         schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: offset
+        required: false
+        schema:
+          type: integer
+        style: form
+      - description: "Sort field (`id`, `name`, or `status`)"
+        explode: true
+        in: query
+        name: sort
+        required: false
+        schema:
+          enum:
+          - id
+          - name
+          - status
           type: string
         style: form
       responses:
@@ -2864,6 +3482,44 @@ paths:
       - Templates
   /addTemplate:
     post:
+      description: |
+        Create a WABA message template (`name`, `category`, `language`, `components`).
+        After create, Meta reviews the template; list it with `GET /templates`.
+
+        Authentication OTP templates (`category: AUTHENTICATION`, copy-code / OTP
+        button) can later be sent only to a phone number. Meta does not accept a
+        BSUID recipient for them (error 131062). If the recipient is known only by
+        BSUID — for example they use a username and their phone number is not in
+        your Business Portfolio — that template cannot be sent.
+
+        To ask a BSUID user for their phone number, add a `REQUEST_CONTACT_INFO`
+        button on a `UTILITY` or `MARKETING` template. Do not send `text` on that
+        button — WhatsApp sets the label (and rejects a custom one). The button
+        also has no send-time parameters: `POST /sendTemplate` does not take a
+        button component for it. Inside an open 24-hour window, call
+        `POST /sendContactInfo` instead of a template.
+
+        When the user shares the number, the inbound webhook is a `contacts`
+        message with `origin: contact_request`. The phone is stored on that BSUID
+        automatically. See `POST /sendContactInfo`.
+
+        ```json
+        {
+          "name": "request_phone",
+          "category": "UTILITY",
+          "language": "en_US",
+          "components": [
+            {
+              "type": "BODY",
+              "text": "Please share your phone number so we can continue."
+            },
+            {
+              "type": "BUTTONS",
+              "buttons": [{ "type": "REQUEST_CONTACT_INFO" }]
+            }
+          ]
+        }
+        ```
       operationId: addTemplate
       parameters:
       - description: JWT token or API key for authorization
@@ -2877,16 +3533,27 @@ paths:
       requestBody:
         content:
           application/json:
+            example:
+              name: hello_world
+              category: UTILITY
+              language: en_US
+              components:
+              - type: BODY
+                text: "Hello {{1}}"
             schema:
               $ref: "#/components/schemas/addTemplate_request"
       responses:
         "200":
           content:
             application/json:
+              example:
+                response:
+                  id: "123456789"
+                  status: PENDING
+                  category: MARKETING
               schema:
-                additionalProperties: true
-                type: object
-          description: Template created
+                $ref: "#/components/schemas/addTemplate_200_response"
+          description: Template created. Provider payload is wrapped in `response`.
         "401":
           content:
             application/json:
@@ -2904,6 +3571,8 @@ paths:
       - Templates
   /removeTemplate:
     post:
+      description: Delete a message template by `name` (all language versions of that
+        name).
       operationId: removeTemplate
       parameters:
       - description: JWT token or API key for authorization
@@ -2917,9 +3586,11 @@ paths:
       requestBody:
         content:
           application/json:
+            example:
+              name: hello_world
             schema:
-              additionalProperties: true
-              type: object
+              $ref: "#/components/schemas/removeTemplate_request"
+        required: true
       responses:
         "200":
           content:
@@ -3310,6 +3981,70 @@ components:
         response:
           $ref: "#/components/schemas/InitiateCallResponse_response"
       type: object
+    WebhookUrlStatus:
+      additionalProperties: true
+      description: |
+        Circuit / auto-disable status for one configured webhook URL.
+        The breaker is per URL (`instanceId` + URL hash), not per channel.
+      example:
+        nextProbeAt: 7
+        reason: reason
+        circuitState: ok
+        trips: 9
+        firstFailAt: 2
+        url: https://openapi-generator.tech
+        fails: 7
+        disabledAt: 3
+        lastStatus: 4
+      properties:
+        url:
+          description: This webhook URL (same string as in `webhookUrl`)
+          format: uri
+          type: string
+        circuitState:
+          description: |
+            Delivery state for this URL only. `ok` delivering; `degraded` recent qualifying fails (still delivering, warning email on the 2nd fail); `open` skipping most deliveries pending a probe; `half_open` probe in flight (resume only on HTTP 2xx); `disabled` sticky auto-disabled until self-serve re-enable (`POST /webhook` / `POST /settings` with this URL) or a successful probe before sticky disable.
+          enum:
+          - ok
+          - degraded
+          - open
+          - half_open
+          - disabled
+          type: string
+        reason:
+          description: "Last qualifying fail reason, e.g. `http_404` or `timeout_or_network`"
+          type: string
+        fails:
+          description: |
+            Diagnostic only — safe for clients to ignore. Number of qualifying delivery
+            failures in the rolling ~10 minute breaker window (not lifetime, not "how many
+            times the customer retried"). Prefer `circuitState` / `disabledWebhooks`.
+          type: integer
+        trips:
+          description: |
+            Diagnostic only — safe for clients to ignore. How many recovery probes already
+            failed for this URL. Probes run on a schedule (≈15 min → 1 h → 6 h); sticky
+            disable after 3 failed probes. The 6 h step is the last probe, not a blind
+            "unblock in 6 hours" timer.
+          type: integer
+        disabledAt:
+          description: Epoch milliseconds when this URL became sticky-disabled
+          type: integer
+        firstFailAt:
+          description: |
+            Diagnostic only. Epoch ms of the first fail in the current ~10 minute window
+            (pairs with `fails`; not a customer-facing period).
+          type: integer
+        lastStatus:
+          description: "Last HTTP status from this URL, when known"
+          type: integer
+        nextProbeAt:
+          description: "Epoch milliseconds of the next half-open probe, if any"
+          type: integer
+      required:
+      - circuitState
+      - url
+      type: object
     SendMessageRequest:
       additionalProperties: false
       description: Request body for sending a text message
@@ -3326,9 +4061,8 @@ components:
           pattern: ^wamid\..+$
           type: string
         chatId:
-          description: "Chat ID in format: phone@c.us (individual) or phone@g.us (group)"
+          description: "Recipient chat ID: phone@c.us, group@g.us, or BSUID@lid"
           example: 12020721369@c.us
-          pattern: "^[0-9]+@[cg]\\.us$"
           type: string
         phone:
           description: Phone number starting with country code (alternative to chatId)
@@ -3336,6 +4070,21 @@ components:
           maximum: 999999999999999
           minimum: 1000000000
           type: integer
+        category:
+          description: |
+            Optional Direct Send category. Direct Send is in beta: Meta has not enabled
+            it on every business portfolio. `utility` or `authentication` enables it.
+            `authentication` is part of that beta and is not recommended. Omit or
+            `service` keeps a normal service message (and the marketing auto-template
+            outside the 24-hour window). `marketing` is rejected.
+          enum:
+          - utility
+          - authentication
+          - service
+          example: utility
+          type: string
+        directSend:
+          $ref: "#/components/schemas/SendMessageRequest_directSend"
       required:
       - body
       type: object
@@ -3380,14 +4129,18 @@ components:
       additionalProperties: true
       properties:
         about:
-          description: Profile About section
+          description: Profile About section (WhatsApp status text)
+          example: Available 9–18
           type: string
         address:
+          description: Business address shown on the profile
           type: string
         description:
           description: Business description (max 256 characters)
           type: string
         email:
+          description: Business email shown on the profile
+          example: support@example.com
           type: string
         vertical:
           description: Industry of the business
@@ -3396,9 +4149,19 @@ components:
           description: "HTTPS URL or data:image/...;base64,... payload"
           type: string
         websites:
+          description: Business website URLs
           items:
             type: string
           type: array
+      type: object
+    updateMe_200_response:
+      additionalProperties: true
+      example:
+        result: success
+      properties:
+        result:
+          example: success
+          type: string
       type: object
     sendLocation_request:
       properties:
@@ -3450,6 +4213,31 @@ components:
       - lat
       - lng
       type: object
+    sendContact_request_contact_name:
+      description: Display name (string) or Cloud API name object
+      oneOf:
+      - type: string
+      - additionalProperties: true
+        type: object
+    sendContact_request_contact:
+      description: Simple contact card. Use this or `contacts`.
+      properties:
+        name:
+          $ref: "#/components/schemas/sendContact_request_contact_name"
+        phone:
+          description: "Contact phone in E.164 (`+79181976551`), not a timestamp"
+          type: string
+        email:
+          type: string
+        org:
+          additionalProperties: true
+          type: object
+        url:
+          type: string
+      required:
+      - name
+      - phone
+      type: object
     sendContact_request_contacts_inner_name:
       properties:
         formatted_name:
@@ -3477,7 +4265,7 @@ components:
     sendContact_request_contacts_inner_phones_inner:
       properties:
         phone:
-          format: utc-millisec
+          description: E.164 phone (`+79181976551`). Not a timestamp.
           type: string
         type:
           type: string
@@ -3491,10 +4279,14 @@ components:
         birthday:
           type: string
         addresses:
-          items: {}
+          items:
+            additionalProperties: true
+            type: object
           type: array
         emails:
-          items: {}
+          items:
+            additionalProperties: true
+            type: object
           type: array
         org:
           $ref: "#/components/schemas/sendContact_request_contacts_inner_org"
@@ -3503,13 +4295,24 @@ components:
             $ref: "#/components/schemas/sendContact_request_contacts_inner_phones_inner"
           type: array
         urls:
-          items: {}
+          items:
+            additionalProperties: true
+            type: object
           type: array
       type: object
     sendContact_request:
       properties:
         phone:
+          description: Recipient phone with country code. Use phone or chatId.
           type: string
+        chatId:
+          description: "Recipient chat ID (`phone@c.us`, group `@g.us`, or BSUID `@lid`).\
+            \ Use phone or chatId."
+          type: string
+        quotedMsgId:
+          type: string
+        contact:
+          $ref: "#/components/schemas/sendContact_request_contact"
         contacts:
           items:
             $ref: "#/components/schemas/sendContact_request_contacts_inner"
@@ -3537,6 +4340,13 @@ components:
     sendList_request:
       properties:
         phone:
+          description: Recipient phone with country code. Use phone or chatId.
+          type: string
+        chatId:
+          description: "Recipient chat ID (`phone@c.us`, group `@g.us`, or BSUID `@lid`).\
+            \ Use phone or chatId."
+          type: string
+        quotedMsgId:
           type: string
         body:
           type: string
@@ -3567,11 +4377,28 @@ components:
     sendButton_request:
       properties:
         phone:
+          description: Recipient phone with country code. Use phone or chatId.
+          type: string
+        chatId:
+          description: "Recipient chat ID (`phone@c.us`, group `@g.us`, or BSUID `@lid`).\
+            \ Use phone or chatId."
+          type: string
+        quotedMsgId:
+          description: Optional Cloud API wamid to quote
           type: string
         body:
           type: string
         footer:
           type: string
+        header:
+          additionalProperties: true
+          description: Optional interactive header (text/image/video/document)
+          type: object
+        buttons:
+          description: "Legacy alias for sections (`[{id,title}]`)"
+          items:
+            type: object
+          type: array
         sections:
           items:
             $ref: "#/components/schemas/sendButton_request_sections_inner"
@@ -3580,9 +4407,40 @@ components:
     sendLocationRequest_request:
       properties:
         phone:
+          description: Recipient phone with country code. Use phone or chatId.
+          type: string
+        chatId:
+          description: "Recipient chat ID (`phone@c.us`, group `@g.us`, or BSUID `@lid`).\
+            \ Use phone or chatId."
+          type: string
+        quotedMsgId:
           type: string
         body:
           type: string
+      type: object
+    sendContactInfo_request:
+      properties:
+        phone:
+          description: "Recipient phone with country code. Use phone, chatId, or bsuid."
+          type: string
+        chatId:
+          description: "Recipient chat ID (`phone@c.us`, BSUID `@lid`, or username\
+            \ `@username`)."
+          type: string
+        bsuid:
+          description: "Business-scoped user id, for example `US.13491208655302741918`."
+          type: string
+        quotedMsgId:
+          type: string
+        body:
+          description: |
+            Text shown above the share-contact button. WhatsApp sets the
+            button label; do not send button text.
+          maxLength: 1024
+          minLength: 1
+          type: string
+      required:
+      - body
       type: object
     sendFlow_request_header:
       description: Flow header (string or text header object)
@@ -3702,6 +4560,11 @@ components:
     sendReaction_request:
       properties:
         phone:
+          description: Recipient phone with country code. Use phone or chatId.
+          type: string
+        chatId:
+          description: "Recipient chat ID (`phone@c.us`, group `@g.us`, or BSUID `@lid`).\
+            \ Use phone or chatId."
           type: string
         body:
           type: string
@@ -3714,6 +4577,15 @@ components:
           description: "Text shown above the carousel. Optional. If omitted and params\
             \ include a body component, the body will be taken from params."
           type: string
+        cards:
+          description: Preferred. 2–10 carousel cards (header + body + CTA or quick
+            replies).
+          items:
+            additionalProperties: true
+            type: object
+          maxItems: 10
+          minItems: 2
+          type: array
         params:
           description: |
             Required. Template-like structure (same as sendTemplate params). Must include a CAROUSEL component and its cards.
@@ -3743,14 +4615,23 @@ components:
           description: "Required if chatId is not set. A phone number starting with\
             \ the country code. USA example: 12020721369."
           type: integer
-      required:
-      - params
       type: object
     sendCarousel_request_1:
       properties:
         body:
+          description: Text shown above the carousel
           type: string
+        cards:
+          description: Preferred. 2–10 carousel cards.
+          items:
+            additionalProperties: true
+            type: object
+          maxItems: 10
+          minItems: 2
+          type: array
         params:
+          description: Template-like alternative — include a CAROUSEL component with
+            cards
           items:
             type: object
           type: array
@@ -3760,34 +4641,87 @@ components:
           type: string
         phone:
           type: integer
+      type: object
+    sendProduct_request:
+      additionalProperties: true
+      properties:
+        phone:
+          description: Recipient phone with country code. Use phone or chatId.
+          type: string
+        chatId:
+          description: "Recipient chat ID (`phone@c.us`, group `@g.us`, or BSUID `@lid`).\
+            \ Use phone or chatId."
+          type: string
+        quotedMsgId:
+          type: string
+        body:
+          description: Optional message text shown with the product
+          type: string
+        footer:
+          type: string
+        header:
+          description: Text header (product list only)
+          type: string
+        action:
+          additionalProperties: true
+          description: "Catalog action (`catalog_id` + `product_retailer_id`, or `sections`\
+            \ for a list)"
+          type: object
       required:
-      - params
+      - action
       type: object
     sendTemplate_request_language:
+      description: Template language. Always set `policy` to `deterministic`.
       properties:
         policy:
+          default: deterministic
+          description: Must be `deterministic`
+          example: deterministic
           type: string
         code:
+          example: en
           type: string
       type: object
     sendTemplate_request:
       properties:
         template:
+          description: "Approved template name (template `name`, not the old HSM `element_name`)"
           type: string
         language:
           $ref: "#/components/schemas/sendTemplate_request_language"
         namespace:
+          description: Template namespace from `list_templates`
           type: string
         params:
-          items: {}
+          description: |
+            Template components in WhatsApp Cloud API format.
+            Each item is an object with `type` (`body`, `header`, `button`)
+            and `parameters` (objects with `type` + `text` / media / action).
+            Never a list of strings. Never HSM `localizable_params`.
+          items:
+            additionalProperties: true
+            description: |
+              Component object, e.g. {"type":"body","parameters":[{"type":"text","text":"Ivan"}]} or a header/button/carousel component. Not a string.
+            type: object
           type: array
         phone:
+          description: Recipient phone with country code (use phone or chatId)
+          type: string
+        chatId:
+          description: "Recipient chat ID (`phone@c.us`, group `@g.us`, or BSUID `@lid`).\
+            \ Use phone or chatId."
+          type: string
+        quotedMsgId:
+          description: Optional Cloud API wamid to quote
           type: string
         useMMlite:
           description: |
             Force Marketing Messages API (POST marketing_messages).
-            If omitted: auto for MARKETING category when channel has mm_lite_enabled
-            and mm_lite_available service settings.
+            If omitted, and the channel has mm_lite_enabled and mm_lite_available:
+            MARKETING templates and templates with an unknown category use
+            marketing_messages. An unknown category falls back to messages
+            (mmLiteFallback) when Meta rejects it. Known AUTHENTICATION and
+            UTILITY templates stay on messages. useMMlite:false forces messages.
           type: boolean
         messageActivitySharing:
           description: |
@@ -3841,6 +4775,23 @@ components:
         error: error
       properties:
         error:
+          type: string
+      type: object
+    createUploadMedia_request:
+      properties:
+        body:
+          description: "File HTTP(S) URL or base64 data URI (`data:<mime>;base64,...`)"
+          type: string
+        url:
+          description: Alias for `body` — public HTTP(S) URL of the file to upload
+          type: string
+      type: object
+    createUploadMedia_200_response:
+      additionalProperties: true
+      example:
+        mediaId: mediaId
+      properties:
+        mediaId:
           type: string
       type: object
     sendSticker_request:
@@ -4127,6 +5078,179 @@ components:
         message:
           type: string
       type: object
+    getStatus_200_response:
+      additionalProperties: true
+      example:
+        accountStatus: authenticated
+        mm_lite_available: true
+        health_status_warning: health_status_warning
+        isCloud: true
+        status: connected
+      properties:
+        isCloud:
+          example: true
+          type: boolean
+        status:
+          description: typically `connected` when the number can send
+          example: connected
+          type: string
+        accountStatus:
+          example: authenticated
+          type: string
+        mm_lite_available:
+          type: boolean
+        health_status_warning:
+          description: Optional soft-fail warning when Meta Graph health_status could
+            not be loaded. Never includes internal provider names.
+          type: string
+      type: object
+    listSettings_200_response_webhookUrl:
+      description: "One URL, or several if multiple webhooks are configured"
+      oneOf:
+      - type: string
+      - items:
+          type: string
+        type: array
+    listSettings_200_response:
+      additionalProperties: true
+      example:
+        reason: reason
+        cta_url_link_tracking_opted_out: true
+        haveDisabledWebhooks: true
+        firstFailAt: 5
+        webhookUrl: listSettings_200_response_webhookUrl
+        guaranteedHooks: true
+        disabledAt: 1
+        disabledWebhooks:
+        - key: ""
+        - key: ""
+        mm_lite_enabled: true
+        nextProbeAt: 2
+        template_analytics_enabled: true
+        rawHooks: true
+        circuitState: ok
+        webhookStatuses:
+        - nextProbeAt: 7
+          reason: reason
+          circuitState: ok
+          trips: 9
+          firstFailAt: 2
+          url: https://openapi-generator.tech
+          fails: 7
+          disabledAt: 3
+          lastStatus: 4
+        - nextProbeAt: 7
+          reason: reason
+          circuitState: ok
+          trips: 9
+          firstFailAt: 2
+          url: https://openapi-generator.tech
+          fails: 7
+          disabledAt: 3
+          lastStatus: 4
+        trips: 6
+        ackNotificationsOn: true
+        fails: 0
+        lastStatus: 5
+      properties:
+        webhookUrl:
+          $ref: "#/components/schemas/listSettings_200_response_webhookUrl"
+        guaranteedHooks:
+          description: Retry webhooks until acknowledged
+          type: boolean
+        ackNotificationsOn:
+          description: Include message ACK / status events in webhooks
+          type: boolean
+        rawHooks:
+          description: Forward raw provider webhook payloads
+          type: boolean
+        mm_lite_enabled:
+          type: boolean
+        template_analytics_enabled:
+          type: boolean
+        cta_url_link_tracking_opted_out:
+          type: boolean
+        haveDisabledWebhooks:
+          description: |
+            `true` when at least one URL in `webhookUrl` is sticky auto-disabled.
+            Not "the channel is dead": other configured URLs still receive events.
+          type: boolean
+        circuitState:
+          description: |
+            Compatibility scalar for **one** URL (first sticky-disabled, else first
+            configured). Prefer `webhookStatuses[].circuitState`.
+          enum:
+          - ok
+          - degraded
+          - open
+          - half_open
+          - disabled
+          type: string
+        reason:
+          description: Last qualifying fail reason of the summary URL
+          type: string
+        fails:
+          description: |
+            Diagnostic only (summary URL). Qualifying failures in the rolling
+            ~10 minute breaker window — not lifetime. Prefer `webhookStatuses`.
+          type: integer
+        trips:
+          description: |
+            Diagnostic only (summary URL). Failed recovery probes (≈15 min →
+            1 h → 6 h). Sticky disable after 3. Not a blind unblock timer.
+          type: integer
+        disabledAt:
+          description: Epoch milliseconds when the summary URL became sticky-disabled
+          type: integer
+        firstFailAt:
+          description: |
+            Diagnostic only (summary URL). Epoch ms of the first fail in the
+            current ~10 minute window (pairs with `fails`).
+          type: integer
+        lastStatus:
+          description: "Last HTTP status from the summary URL, when known"
+          type: integer
+        nextProbeAt:
+          description: "Epoch milliseconds of the next half-open probe for the summary\
+            \ URL, if any"
+          type: integer
+        disabledWebhooks:
+          description: Currently configured URLs that are sticky auto-disabled (subset
+            of `webhookUrl`)
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+        webhookStatuses:
+          description: One entry per currently configured URL. Prefer this over top-level
+            `haveDisabledWebhooks` / `circuitState`.
+          items:
+            $ref: "#/components/schemas/WebhookUrlStatus"
+          type: array
+      type: object
+    createSettings_request_webhookUrl:
+      description: "Replacement webhook URL, or array of URLs (max 5)"
+      oneOf:
+      - type: string
+      - items:
+          type: string
+        type: array
+    createSettings_request:
+      additionalProperties: true
+      properties:
+        webhookUrl:
+          $ref: "#/components/schemas/createSettings_request_webhookUrl"
+        guaranteedHooks:
+          type: boolean
+        ackNotificationsOn:
+          type: boolean
+        rawHooks:
+          type: boolean
+        template_analytics_enabled:
+          type: boolean
+        cta_url_link_tracking_opted_out:
+          type: boolean
+      type: object
     getCommerce_200_response_inner:
       additionalProperties: true
       example:
@@ -4173,13 +5297,156 @@ components:
         success:
           type: boolean
       type: object
+    getWebhook_200_response_webhookUrl:
+      description: "Configured webhook URL, array of URLs, or null when none is set"
+      nullable: true
+      oneOf:
+      - format: uri
+        nullable: true
+        type: string
+      - items:
+          format: uri
+          type: string
+        type: array
     getWebhook_200_response:
       additionalProperties: true
       example:
-        webhookUrl: webhookUrl
+        nextProbeAt: 2
+        reason: reason
+        circuitState: ok
+        webhookStatuses:
+        - nextProbeAt: 7
+          reason: reason
+          circuitState: ok
+          trips: 9
+          firstFailAt: 2
+          url: https://openapi-generator.tech
+          fails: 7
+          disabledAt: 3
+          lastStatus: 4
+        - nextProbeAt: 7
+          reason: reason
+          circuitState: ok
+          trips: 9
+          firstFailAt: 2
+          url: https://openapi-generator.tech
+          fails: 7
+          disabledAt: 3
+          lastStatus: 4
+        trips: 6
+        haveDisabledWebhooks: true
+        firstFailAt: 5
+        webhookUrl: https://openapi-generator.tech
+        fails: 0
+        disabledAt: 1
+        lastStatus: 5
+        disabledWebhooks:
+        - key: ""
+        - key: ""
       properties:
         webhookUrl:
+          $ref: "#/components/schemas/getWebhook_200_response_webhookUrl"
+        haveDisabledWebhooks:
+          description: |
+            `true` when at least one URL in `webhookUrl` is sticky auto-disabled.
+            Not "the channel is dead": other configured URLs still receive events.
+            Send/receive are unaffected.
+          type: boolean
+        circuitState:
+          description: |
+            Compatibility scalar for **one** URL (first sticky-disabled, else first
+            configured). Not the channel as a whole. Prefer `webhookStatuses[].circuitState`.
+          enum:
+          - ok
+          - degraded
+          - open
+          - half_open
+          - disabled
           type: string
+        reason:
+          description: Last qualifying fail reason of the summary URL (same URL as
+            `circuitState`)
+          type: string
+        fails:
+          description: |
+            Diagnostic only (summary URL). Qualifying failures in the rolling
+            ~10 minute breaker window — not lifetime and not customer retries.
+            Prefer `webhookStatuses` / `disabledWebhooks`.
+          type: integer
+        trips:
+          description: |
+            Diagnostic only (summary URL). Failed recovery probes (≈15 min →
+            1 h → 6 h). Sticky disable after 3. Not a blind unblock timer.
+          type: integer
+        disabledAt:
+          description: Epoch milliseconds when the summary URL became sticky-disabled
+          type: integer
+        firstFailAt:
+          description: |
+            Diagnostic only (summary URL). Epoch ms of the first fail in the
+            current ~10 minute window (pairs with `fails`).
+          type: integer
+        lastStatus:
+          description: "Last HTTP status from the summary URL, when known"
+          type: integer
+        nextProbeAt:
+          description: "Epoch milliseconds of the next half-open probe for the summary\
+            \ URL, if any"
+          type: integer
+        disabledWebhooks:
+          description: |
+            Currently configured URLs that are sticky auto-disabled (subset of `webhookUrl`).
+            Does not include leftover URLs that are no longer configured.
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+        webhookStatuses:
+          description: |
+            One entry per currently configured URL. Prefer this over top-level
+            `haveDisabledWebhooks` / `circuitState` when more than one webhook is set.
+          items:
+            $ref: "#/components/schemas/WebhookUrlStatus"
+          type: array
+      type: object
+    setWebhook_request_webhookUrl:
+      description: |
+        HTTP or HTTPS URL, or array of URLs (max 5). Replaces the stored list.
+        Empty values are rejected — clear webhooks with `POST /settings`.
+      oneOf:
+      - format: uri
+        type: string
+      - items:
+          format: uri
+          type: string
+        maxItems: 5
+        type: array
+    setWebhook_request:
+      additionalProperties: true
+      properties:
+        webhookUrl:
+          $ref: "#/components/schemas/setWebhook_request_webhookUrl"
+      required:
+      - webhookUrl
+      type: object
+    setWebhook_200_response_webhookUrl:
+      description: Currently stored webhook URL or list
+      oneOf:
+      - type: string
+      - items:
+          type: string
+        type: array
+    setWebhook_200_response:
+      additionalProperties: true
+      example:
+        set: true
+        webhookUrl: setWebhook_200_response_webhookUrl
+      properties:
+        set:
+          description: True when the stored webhook URL(s) match the request
+          type: boolean
+        webhookUrl:
+          $ref: "#/components/schemas/setWebhook_200_response_webhookUrl"
       type: object
     updateCallingSettings_200_response_response:
       additionalProperties: true
@@ -4206,6 +5473,17 @@ components:
         response:
           $ref: "#/components/schemas/updateCallingSettings_200_response_response"
       type: object
+    createGroups_request:
+      properties:
+        groupName:
+          description: Group subject / name
+          type: string
+        description:
+          description: Optional group description
+          type: string
+      required:
+      - groupName
+      type: object
     createGroups_200_response:
       additionalProperties: true
       example:
@@ -4214,6 +5492,18 @@ components:
         error:
           description: Error details returned by the provider. May be a string or
             a JSON object.
+      type: object
+    createGroupsGroupId_request:
+      properties:
+        subject:
+          description: New group subject / name
+          type: string
+        description:
+          description: New group description
+          type: string
+        profile_picture_file:
+          description: Image URL or base64 data URI for the group profile picture
+          type: string
       type: object
     deleteGroupsGroupId_200_response:
       additionalProperties: true
@@ -4291,6 +5581,39 @@ components:
           description: Error details returned by the provider. May be a string or
             a JSON object.
       type: object
+    createFlows_request:
+      properties:
+        name:
+          description: Flow name
+          type: string
+        categories:
+          description: One or more Flow categories
+          items:
+            enum:
+            - SIGN_UP
+            - SIGN_IN
+            - APPOINTMENT_BOOKING
+            - LEAD_GENERATION
+            - CONTACT_US
+            - CUSTOMER_SUPPORT
+            - SURVEY
+            - OTHER
+            type: string
+          type: array
+        endpointUri:
+          description: HTTPS endpoint for the Flow data channel
+          type: string
+        publish:
+          description: Publish immediately after create
+          type: boolean
+        flowJson:
+          additionalProperties: true
+          description: Optional Flow JSON document
+          type: object
+      required:
+      - categories
+      - name
+      type: object
     deleteFlowsFlowId_200_response:
       additionalProperties: true
       example:
@@ -4302,6 +5625,36 @@ components:
         error:
           description: Error details returned by the provider. May be a string or
             a JSON object.
+      type: object
+    patchFlowsFlowIdMetadata_request:
+      properties:
+        name:
+          type: string
+        categories:
+          items:
+            enum:
+            - SIGN_UP
+            - SIGN_IN
+            - APPOINTMENT_BOOKING
+            - LEAD_GENERATION
+            - CONTACT_US
+            - CUSTOMER_SUPPORT
+            - SURVEY
+            - OTHER
+            type: string
+          type: array
+        endpointUri:
+          description: HTTPS endpoint for the Flow data channel
+          type: string
+      type: object
+    patchFlowsFlowIdAssets_request:
+      properties:
+        flowJson:
+          additionalProperties: true
+          description: WhatsApp Flow JSON document
+          type: object
+      required:
+      - flowJson
       type: object
     patchFlowsFlowIdAssets_200_response:
       additionalProperties: true
@@ -4348,16 +5701,42 @@ components:
       additionalProperties: true
       properties:
         name:
+          description: Template name
+          example: hello_world
           type: string
         category:
+          description: "MARKETING, UTILITY, or AUTHENTICATION"
+          example: UTILITY
           type: string
         language:
+          description: Template language code (e.g. en_US)
+          example: en_US
           type: string
         components:
+          description: "Template components (HEADER, BODY, FOOTER, BUTTONS, CAROUSEL)"
           items:
             additionalProperties: true
             type: object
           type: array
+      type: object
+    addTemplate_200_response:
+      additionalProperties: true
+      example:
+        response:
+          key: ""
+      properties:
+        response:
+          additionalProperties: true
+          description: Upstream create-template payload
+          type: object
+      type: object
+    removeTemplate_request:
+      properties:
+        name:
+          description: Template name to delete
+          type: string
+      required:
+      - name
       type: object
     ConversationalAutomation_commands_inner:
       additionalProperties: true
@@ -4611,6 +5990,28 @@ components:
         error: error
       properties:
         error:
+          type: string
+      type: object
+    SendMessageRequest_directSend:
+      additionalProperties: false
+      description: |
+        Optional. Ignored unless `category` is `utility` or `authentication`.
+        `serviceFirst` is not forwarded to Meta.
+      properties:
+        serviceFirst:
+          description: |
+            When true, send a service message first. Success stops there.
+            A closed-window error (131047) retries as Direct Send.
+            Any other error is returned and Direct Send is not attempted.
+            Omit or false to send Direct Send immediately, even inside an open window.
+          type: boolean
+        templateName:
+          description: |
+            Utility only. Meta creates or reuses a Direct Send template with this exact
+            name (`^[a-z0-9_]+$`, max 512). Do not reuse a template created by hand.
+          example: order_shipped
+          maxLength: 512
+          pattern: "^[a-z0-9_]+$"
           type: string
       type: object
   securitySchemes:

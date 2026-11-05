@@ -4,9 +4,13 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**Phone** | Pointer to **string** |  | [optional] 
+**Phone** | Pointer to **string** | Recipient phone with country code. Use phone or chatId. | [optional] 
+**ChatId** | Pointer to **string** | Recipient chat ID (&#x60;phone@c.us&#x60;, group &#x60;@g.us&#x60;, or BSUID &#x60;@lid&#x60;). Use phone or chatId. | [optional] 
+**QuotedMsgId** | Pointer to **string** | Optional Cloud API wamid to quote | [optional] 
 **Body** | Pointer to **string** |  | [optional] 
 **Footer** | Pointer to **string** |  | [optional] 
+**Header** | Pointer to **map[string]interface{}** | Optional interactive header (text/image/video/document) | [optional] 
+**Buttons** | Pointer to **[]map[string]interface{}** | Legacy alias for sections (&#x60;[{id,title}]&#x60;) | [optional] 
 **Sections** | Pointer to [**[]SendButtonRequestSectionsInner**](SendButtonRequestSectionsInner.md) |  | [optional] 
 
 ## Methods
@@ -52,6 +56,56 @@ SetPhone sets Phone field to given value.
 `func (o *SendButtonRequest) HasPhone() bool`
 
 HasPhone returns a boolean if a field has been set.
+
+### GetChatId
+
+`func (o *SendButtonRequest) GetChatId() string`
+
+GetChatId returns the ChatId field if non-nil, zero value otherwise.
+
+### GetChatIdOk
+
+`func (o *SendButtonRequest) GetChatIdOk() (*string, bool)`
+
+GetChatIdOk returns a tuple with the ChatId field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetChatId
+
+`func (o *SendButtonRequest) SetChatId(v string)`
+
+SetChatId sets ChatId field to given value.
+
+### HasChatId
+
+`func (o *SendButtonRequest) HasChatId() bool`
+
+HasChatId returns a boolean if a field has been set.
+
+### GetQuotedMsgId
+
+`func (o *SendButtonRequest) GetQuotedMsgId() string`
+
+GetQuotedMsgId returns the QuotedMsgId field if non-nil, zero value otherwise.
+
+### GetQuotedMsgIdOk
+
+`func (o *SendButtonRequest) GetQuotedMsgIdOk() (*string, bool)`
+
+GetQuotedMsgIdOk returns a tuple with the QuotedMsgId field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetQuotedMsgId
+
+`func (o *SendButtonRequest) SetQuotedMsgId(v string)`
+
+SetQuotedMsgId sets QuotedMsgId field to given value.
+
+### HasQuotedMsgId
+
+`func (o *SendButtonRequest) HasQuotedMsgId() bool`
+
+HasQuotedMsgId returns a boolean if a field has been set.
 
 ### GetBody
 
@@ -102,6 +156,56 @@ SetFooter sets Footer field to given value.
 `func (o *SendButtonRequest) HasFooter() bool`
 
 HasFooter returns a boolean if a field has been set.
+
+### GetHeader
+
+`func (o *SendButtonRequest) GetHeader() map[string]interface{}`
+
+GetHeader returns the Header field if non-nil, zero value otherwise.
+
+### GetHeaderOk
+
+`func (o *SendButtonRequest) GetHeaderOk() (*map[string]interface{}, bool)`
+
+GetHeaderOk returns a tuple with the Header field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetHeader
+
+`func (o *SendButtonRequest) SetHeader(v map[string]interface{})`
+
+SetHeader sets Header field to given value.
+
+### HasHeader
+
+`func (o *SendButtonRequest) HasHeader() bool`
+
+HasHeader returns a boolean if a field has been set.
+
+### GetButtons
+
+`func (o *SendButtonRequest) GetButtons() []map[string]interface{}`
+
+GetButtons returns the Buttons field if non-nil, zero value otherwise.
+
+### GetButtonsOk
+
+`func (o *SendButtonRequest) GetButtonsOk() (*[]map[string]interface{}, bool)`
+
+GetButtonsOk returns a tuple with the Buttons field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetButtons
+
+`func (o *SendButtonRequest) SetButtons(v []map[string]interface{})`
+
+SetButtons sets Buttons field to given value.
+
+### HasButtons
+
+`func (o *SendButtonRequest) HasButtons() bool`
+
+HasButtons returns a boolean if a field has been set.
 
 ### GetSections
 

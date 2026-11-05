@@ -4,13 +4,13 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**About** | Pointer to **string** | Profile About section | [optional] 
-**Address** | Pointer to **string** |  | [optional] 
+**About** | Pointer to **string** | Profile About section (WhatsApp status text) | [optional] 
+**Address** | Pointer to **string** | Business address shown on the profile | [optional] 
 **Description** | Pointer to **string** | Business description (max 256 characters) | [optional] 
-**Email** | Pointer to **string** |  | [optional] 
+**Email** | Pointer to **string** | Business email shown on the profile | [optional] 
 **Vertical** | Pointer to **string** | Industry of the business | [optional] 
 **Photo** | Pointer to **string** | HTTPS URL or data:image/...;base64,... payload | [optional] 
-**Websites** | Pointer to **[]string** |  | [optional] 
+**Websites** | Pointer to **[]string** | Business website URLs | [optional] 
 
 ## Methods
 

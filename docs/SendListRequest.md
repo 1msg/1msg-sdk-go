@@ -4,7 +4,9 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**Phone** | Pointer to **string** |  | [optional] 
+**Phone** | Pointer to **string** | Recipient phone with country code. Use phone or chatId. | [optional] 
+**ChatId** | Pointer to **string** | Recipient chat ID (&#x60;phone@c.us&#x60;, group &#x60;@g.us&#x60;, or BSUID &#x60;@lid&#x60;). Use phone or chatId. | [optional] 
+**QuotedMsgId** | Pointer to **string** |  | [optional] 
 **Body** | Pointer to **string** |  | [optional] 
 **ButtonText** | Pointer to **string** |  | [optional] 
 **Action** | Pointer to **string** |  | [optional] 
@@ -53,6 +55,56 @@ SetPhone sets Phone field to given value.
 `func (o *SendListRequest) HasPhone() bool`
 
 HasPhone returns a boolean if a field has been set.
+
+### GetChatId
+
+`func (o *SendListRequest) GetChatId() string`
+
+GetChatId returns the ChatId field if non-nil, zero value otherwise.
+
+### GetChatIdOk
+
+`func (o *SendListRequest) GetChatIdOk() (*string, bool)`
+
+GetChatIdOk returns a tuple with the ChatId field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetChatId
+
+`func (o *SendListRequest) SetChatId(v string)`
+
+SetChatId sets ChatId field to given value.
+
+### HasChatId
+
+`func (o *SendListRequest) HasChatId() bool`
+
+HasChatId returns a boolean if a field has been set.
+
+### GetQuotedMsgId
+
+`func (o *SendListRequest) GetQuotedMsgId() string`
+
+GetQuotedMsgId returns the QuotedMsgId field if non-nil, zero value otherwise.
+
+### GetQuotedMsgIdOk
+
+`func (o *SendListRequest) GetQuotedMsgIdOk() (*string, bool)`
+
+GetQuotedMsgIdOk returns a tuple with the QuotedMsgId field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetQuotedMsgId
+
+`func (o *SendListRequest) SetQuotedMsgId(v string)`
+
+SetQuotedMsgId sets QuotedMsgId field to given value.
+
+### HasQuotedMsgId
+
+`func (o *SendListRequest) HasQuotedMsgId() bool`
+
+HasQuotedMsgId returns a boolean if a field has been set.
 
 ### GetBody
 

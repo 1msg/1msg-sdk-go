@@ -6,11 +6,11 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Name** | Pointer to [**SendContactRequestContactsInnerName**](SendContactRequestContactsInnerName.md) |  | [optional] 
 **Birthday** | Pointer to **string** |  | [optional] 
-**Addresses** | Pointer to **[]interface{}** |  | [optional] 
-**Emails** | Pointer to **[]interface{}** |  | [optional] 
+**Addresses** | Pointer to **[]map[string]interface{}** |  | [optional] 
+**Emails** | Pointer to **[]map[string]interface{}** |  | [optional] 
 **Org** | Pointer to [**SendContactRequestContactsInnerOrg**](SendContactRequestContactsInnerOrg.md) |  | [optional] 
 **Phones** | Pointer to [**[]SendContactRequestContactsInnerPhonesInner**](SendContactRequestContactsInnerPhonesInner.md) |  | [optional] 
-**Urls** | Pointer to **[]interface{}** |  | [optional] 
+**Urls** | Pointer to **[]map[string]interface{}** |  | [optional] 
 
 ## Methods
 
@@ -83,20 +83,20 @@ HasBirthday returns a boolean if a field has been set.
 
 ### GetAddresses
 
-`func (o *SendContactRequestContactsInner) GetAddresses() []interface{}`
+`func (o *SendContactRequestContactsInner) GetAddresses() []map[string]interface{}`
 
 GetAddresses returns the Addresses field if non-nil, zero value otherwise.
 
 ### GetAddressesOk
 
-`func (o *SendContactRequestContactsInner) GetAddressesOk() (*[]interface{}, bool)`
+`func (o *SendContactRequestContactsInner) GetAddressesOk() (*[]map[string]interface{}, bool)`
 
 GetAddressesOk returns a tuple with the Addresses field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetAddresses
 
-`func (o *SendContactRequestContactsInner) SetAddresses(v []interface{})`
+`func (o *SendContactRequestContactsInner) SetAddresses(v []map[string]interface{})`
 
 SetAddresses sets Addresses field to given value.
 
@@ -108,20 +108,20 @@ HasAddresses returns a boolean if a field has been set.
 
 ### GetEmails
 
-`func (o *SendContactRequestContactsInner) GetEmails() []interface{}`
+`func (o *SendContactRequestContactsInner) GetEmails() []map[string]interface{}`
 
 GetEmails returns the Emails field if non-nil, zero value otherwise.
 
 ### GetEmailsOk
 
-`func (o *SendContactRequestContactsInner) GetEmailsOk() (*[]interface{}, bool)`
+`func (o *SendContactRequestContactsInner) GetEmailsOk() (*[]map[string]interface{}, bool)`
 
 GetEmailsOk returns a tuple with the Emails field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetEmails
 
-`func (o *SendContactRequestContactsInner) SetEmails(v []interface{})`
+`func (o *SendContactRequestContactsInner) SetEmails(v []map[string]interface{})`
 
 SetEmails sets Emails field to given value.
 
@@ -183,20 +183,20 @@ HasPhones returns a boolean if a field has been set.
 
 ### GetUrls
 
-`func (o *SendContactRequestContactsInner) GetUrls() []interface{}`
+`func (o *SendContactRequestContactsInner) GetUrls() []map[string]interface{}`
 
 GetUrls returns the Urls field if non-nil, zero value otherwise.
 
 ### GetUrlsOk
 
-`func (o *SendContactRequestContactsInner) GetUrlsOk() (*[]interface{}, bool)`
+`func (o *SendContactRequestContactsInner) GetUrlsOk() (*[]map[string]interface{}, bool)`
 
 GetUrlsOk returns a tuple with the Urls field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetUrls
 
-`func (o *SendContactRequestContactsInner) SetUrls(v []interface{})`
+`func (o *SendContactRequestContactsInner) SetUrls(v []map[string]interface{})`
 
 SetUrls sets Urls field to given value.
 

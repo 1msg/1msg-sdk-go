@@ -4,10 +4,10 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**Name** | Pointer to **string** |  | [optional] 
-**Category** | Pointer to **string** |  | [optional] 
-**Language** | Pointer to **string** |  | [optional] 
-**Components** | Pointer to **[]map[string]interface{}** |  | [optional] 
+**Name** | Pointer to **string** | Template name | [optional] 
+**Category** | Pointer to **string** | MARKETING, UTILITY, or AUTHENTICATION | [optional] 
+**Language** | Pointer to **string** | Template language code (e.g. en_US) | [optional] 
+**Components** | Pointer to **[]map[string]interface{}** | Template components (HEADER, BODY, FOOTER, BUTTONS, CAROUSEL) | [optional] 
 
 ## Methods
 

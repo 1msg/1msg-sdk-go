@@ -4,8 +4,9 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**Body** | Pointer to **string** |  | [optional] 
-**Params** | **[]map[string]interface{}** |  | 
+**Body** | Pointer to **string** | Text shown above the carousel | [optional] 
+**Cards** | Pointer to **[]map[string]interface{}** | Preferred. 2–10 carousel cards. | [optional] 
+**Params** | Pointer to **[]map[string]interface{}** | Template-like alternative — include a CAROUSEL component with cards | [optional] 
 **QuotedMsgId** | Pointer to **string** |  | [optional] 
 **ChatId** | Pointer to **string** |  | [optional] 
 **Phone** | Pointer to **int32** |  | [optional] 
@@ -14,7 +15,7 @@ Name | Type | Description | Notes
 
 ### NewSendCarouselRequest1
 
-`func NewSendCarouselRequest1(params []map[string]interface{}, ) *SendCarouselRequest1`
+`func NewSendCarouselRequest1() *SendCarouselRequest1`
 
 NewSendCarouselRequest1 instantiates a new SendCarouselRequest1 object
 This constructor will assign default values to properties that have it defined,
@@ -54,6 +55,31 @@ SetBody sets Body field to given value.
 
 HasBody returns a boolean if a field has been set.
 
+### GetCards
+
+`func (o *SendCarouselRequest1) GetCards() []map[string]interface{}`
+
+GetCards returns the Cards field if non-nil, zero value otherwise.
+
+### GetCardsOk
+
+`func (o *SendCarouselRequest1) GetCardsOk() (*[]map[string]interface{}, bool)`
+
+GetCardsOk returns a tuple with the Cards field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetCards
+
+`func (o *SendCarouselRequest1) SetCards(v []map[string]interface{})`
+
+SetCards sets Cards field to given value.
+
+### HasCards
+
+`func (o *SendCarouselRequest1) HasCards() bool`
+
+HasCards returns a boolean if a field has been set.
+
 ### GetParams
 
 `func (o *SendCarouselRequest1) GetParams() []map[string]interface{}`
@@ -73,6 +99,11 @@ and a boolean to check if the value has been set.
 
 SetParams sets Params field to given value.
 
+### HasParams
+
+`func (o *SendCarouselRequest1) HasParams() bool`
+
+HasParams returns a boolean if a field has been set.
 
 ### GetQuotedMsgId
 

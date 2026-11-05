@@ -15,6 +15,7 @@ Method | HTTP request | Description
 [**SendButton**](MessagingAPI.md#SendButton) | **Post** /sendButton | Send Reply Buttons Message
 [**SendCarousel**](MessagingAPI.md#SendCarousel) | **Post** /sendCarousel | Send Carousel
 [**SendContact**](MessagingAPI.md#SendContact) | **Post** /sendContact | Send a Contact
+[**SendContactInfo**](MessagingAPI.md#SendContactInfo) | **Post** /sendContactInfo | Request the user&#39;s phone number
 [**SendCtaUrl**](MessagingAPI.md#SendCtaUrl) | **Post** /sendCtaUrl | Send CTA URL interactive message
 [**SendFile**](MessagingAPI.md#SendFile) | **Post** /sendFile | Send a File
 [**SendFlow**](MessagingAPI.md#SendFlow) | **Post** /sendFlow | Send WhatsApp Flow Message
@@ -102,9 +103,11 @@ Name | Type | Description  | Notes
 
 ## CreateUploadMedia
 
-> CreateUploadMedia(ctx).Token(token).RequestBody(requestBody).Execute()
+> CreateUploadMedia200Response CreateUploadMedia(ctx).Token(token).CreateUploadMediaRequest(createUploadMediaRequest).Execute()
 
 Upload media
+
+
 
 ### Example
 
@@ -120,15 +123,17 @@ import (
 
 func main() {
 	token := "token_example" // string | JWT token or API key for authorization
-	requestBody := map[string]interface{}{"key": interface{}(123)} // map[string]interface{} |  (optional)
+	createUploadMediaRequest := *openapiclient.NewCreateUploadMediaRequest() // CreateUploadMediaRequest | 
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	r, err := apiClient.MessagingAPI.CreateUploadMedia(context.Background()).Token(token).RequestBody(requestBody).Execute()
+	resp, r, err := apiClient.MessagingAPI.CreateUploadMedia(context.Background()).Token(token).CreateUploadMediaRequest(createUploadMediaRequest).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `MessagingAPI.CreateUploadMedia``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
 	}
+	// response from `CreateUploadMedia`: CreateUploadMedia200Response
+	fmt.Fprintf(os.Stdout, "Response from `MessagingAPI.CreateUploadMedia`: %v\n", resp)
 }
 ```
 
@@ -144,11 +149,11 @@ Other parameters are passed through a pointer to a apiCreateUploadMediaRequest s
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **token** | **string** | JWT token or API key for authorization | 
- **requestBody** | **map[string]interface{}** |  | 
+ **createUploadMediaRequest** | [**CreateUploadMediaRequest**](CreateUploadMediaRequest.md) |  | 
 
 ### Return type
 
- (empty response body)
+[**CreateUploadMedia200Response**](CreateUploadMedia200Response.md)
 
 ### Authorization
 
@@ -157,7 +162,7 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
 - **Content-Type**: application/json
-- **Accept**: Not defined
+- **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)
@@ -370,9 +375,11 @@ Name | Type | Description  | Notes
 
 ## ListMessages
 
-> ListMessages200Response ListMessages(ctx).Token(token).Execute()
+> ListMessages200Response ListMessages(ctx).Token(token).ChatId(chatId).Limit(limit).Last(last).LastMessageNumber(lastMessageNumber).FirstMessageNumber(firstMessageNumber).MinTime(minTime).MaxTime(maxTime).MsgId(msgId).Execute()
 
 Get messages list
+
+
 
 ### Example
 
@@ -388,10 +395,18 @@ import (
 
 func main() {
 	token := "token_example" // string | JWT token or API key for authorization
+	chatId := "chatId_example" // string | Filter messages for one chat (`phone@c.us`, group `@g.us`, or BSUID `@lid`) (optional)
+	limit := int32(56) // int32 | Max rows to return (default 100) (optional)
+	last := true // bool | If true, return the latest messages (DESC). Default false. (optional)
+	lastMessageNumber := int32(56) // int32 |  (optional)
+	firstMessageNumber := int32(56) // int32 |  (optional)
+	minTime := int32(56) // int32 | Unix timestamp lower bound (optional)
+	maxTime := int32(56) // int32 | Unix timestamp upper bound (optional)
+	msgId := "msgId_example" // string | Filter by stored message id (optional)
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.MessagingAPI.ListMessages(context.Background()).Token(token).Execute()
+	resp, r, err := apiClient.MessagingAPI.ListMessages(context.Background()).Token(token).ChatId(chatId).Limit(limit).Last(last).LastMessageNumber(lastMessageNumber).FirstMessageNumber(firstMessageNumber).MinTime(minTime).MaxTime(maxTime).MsgId(msgId).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `MessagingAPI.ListMessages``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -413,6 +428,14 @@ Other parameters are passed through a pointer to a apiListMessagesRequest struct
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **token** | **string** | JWT token or API key for authorization | 
+ **chatId** | **string** | Filter messages for one chat (&#x60;phone@c.us&#x60;, group &#x60;@g.us&#x60;, or BSUID &#x60;@lid&#x60;) | 
+ **limit** | **int32** | Max rows to return (default 100) | 
+ **last** | **bool** | If true, return the latest messages (DESC). Default false. | 
+ **lastMessageNumber** | **int32** |  | 
+ **firstMessageNumber** | **int32** |  | 
+ **minTime** | **int32** | Unix timestamp lower bound | 
+ **maxTime** | **int32** | Unix timestamp upper bound | 
+ **msgId** | **string** | Filter by stored message id | 
 
 ### Return type
 
@@ -636,7 +659,7 @@ Name | Type | Description  | Notes
 
 ## SendCarousel
 
-> MessageSentResponse SendCarousel(ctx).Token(token).Params(params).Body(body).QuotedMsgId(quotedMsgId).ChatId(chatId).Phone(phone).Execute()
+> MessageSentResponse SendCarousel(ctx).Token(token).Body(body).Cards(cards).Params(params).QuotedMsgId(quotedMsgId).ChatId(chatId).Phone(phone).Execute()
 
 Send Carousel
 
@@ -656,15 +679,16 @@ import (
 
 func main() {
 	token := "token_example" // string | JWT token or API key for authorization
-	params := []map[string]interface{}{map[string]interface{}(123)} // []map[string]interface{} | Required. Template-like structure (same as sendTemplate params). Must include a CAROUSEL component and its cards.  Structure: - params[] item with type CAROUSEL and cards (2..10) - cards[] item:   - components[] items:     - header: parameters[0] with type image/video/product       - image: {\\\"image\\\": {\\\"link\\\": \\\"https://...\\\"}}       - video: {\\\"video\\\": {\\\"link\\\": \\\"https://...\\\"}}       - product: {\\\"product\\\": {\\\"catalog_id\\\": \\\"...\\\", \\\"product_retailer_id\\\": \\\"...\\\"}}     - button: sub_type url or quick_reply       - url: parameters {\\\"text\\\": \\\"Button\\\", \\\"url\\\": \\\"https://...\\\"}       - quick_reply: parameters[] of {\\\"id\\\": \\\"...\\\", \\\"text\\\": \\\"...\\\"} 
 	body := "body_example" // string | Text shown above the carousel. Optional. If omitted and params include a body component, the body will be taken from params. (optional)
+	cards := []map[string]interface{}{map[string]interface{}{"key": interface{}(123)}} // []map[string]interface{} | Preferred. 2–10 carousel cards (header + body + CTA or quick replies). (optional)
+	params := []map[string]interface{}{map[string]interface{}(123)} // []map[string]interface{} | Required. Template-like structure (same as sendTemplate params). Must include a CAROUSEL component and its cards.  Structure: - params[] item with type CAROUSEL and cards (2..10) - cards[] item:   - components[] items:     - header: parameters[0] with type image/video/product       - image: {\\\"image\\\": {\\\"link\\\": \\\"https://...\\\"}}       - video: {\\\"video\\\": {\\\"link\\\": \\\"https://...\\\"}}       - product: {\\\"product\\\": {\\\"catalog_id\\\": \\\"...\\\", \\\"product_retailer_id\\\": \\\"...\\\"}}     - button: sub_type url or quick_reply       - url: parameters {\\\"text\\\": \\\"Button\\\", \\\"url\\\": \\\"https://...\\\"}       - quick_reply: parameters[] of {\\\"id\\\": \\\"...\\\", \\\"text\\\": \\\"...\\\"}  (optional)
 	quotedMsgId := "quotedMsgId_example" // string | Quoted message ID (Cloud API) (optional)
 	chatId := "chatId_example" // string | Required if phone is not set. Chat ID from the message list. Examples: 12020721369@c.us or 120363046942338209@g.us(group) (optional)
 	phone := int32(56) // int32 | Required if chatId is not set. A phone number starting with the country code. USA example: 12020721369. (optional)
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.MessagingAPI.SendCarousel(context.Background()).Token(token).Params(params).Body(body).QuotedMsgId(quotedMsgId).ChatId(chatId).Phone(phone).Execute()
+	resp, r, err := apiClient.MessagingAPI.SendCarousel(context.Background()).Token(token).Body(body).Cards(cards).Params(params).QuotedMsgId(quotedMsgId).ChatId(chatId).Phone(phone).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `MessagingAPI.SendCarousel``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -686,8 +710,9 @@ Other parameters are passed through a pointer to a apiSendCarouselRequest struct
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **token** | **string** | JWT token or API key for authorization | 
- **params** | **[]map[string]interface{}** | Required. Template-like structure (same as sendTemplate params). Must include a CAROUSEL component and its cards.  Structure: - params[] item with type CAROUSEL and cards (2..10) - cards[] item:   - components[] items:     - header: parameters[0] with type image/video/product       - image: {\\\&quot;image\\\&quot;: {\\\&quot;link\\\&quot;: \\\&quot;https://...\\\&quot;}}       - video: {\\\&quot;video\\\&quot;: {\\\&quot;link\\\&quot;: \\\&quot;https://...\\\&quot;}}       - product: {\\\&quot;product\\\&quot;: {\\\&quot;catalog_id\\\&quot;: \\\&quot;...\\\&quot;, \\\&quot;product_retailer_id\\\&quot;: \\\&quot;...\\\&quot;}}     - button: sub_type url or quick_reply       - url: parameters {\\\&quot;text\\\&quot;: \\\&quot;Button\\\&quot;, \\\&quot;url\\\&quot;: \\\&quot;https://...\\\&quot;}       - quick_reply: parameters[] of {\\\&quot;id\\\&quot;: \\\&quot;...\\\&quot;, \\\&quot;text\\\&quot;: \\\&quot;...\\\&quot;}  | 
  **body** | **string** | Text shown above the carousel. Optional. If omitted and params include a body component, the body will be taken from params. | 
+ **cards** | **[]map[string]interface{}** | Preferred. 2–10 carousel cards (header + body + CTA or quick replies). | 
+ **params** | **[]map[string]interface{}** | Required. Template-like structure (same as sendTemplate params). Must include a CAROUSEL component and its cards.  Structure: - params[] item with type CAROUSEL and cards (2..10) - cards[] item:   - components[] items:     - header: parameters[0] with type image/video/product       - image: {\\\&quot;image\\\&quot;: {\\\&quot;link\\\&quot;: \\\&quot;https://...\\\&quot;}}       - video: {\\\&quot;video\\\&quot;: {\\\&quot;link\\\&quot;: \\\&quot;https://...\\\&quot;}}       - product: {\\\&quot;product\\\&quot;: {\\\&quot;catalog_id\\\&quot;: \\\&quot;...\\\&quot;, \\\&quot;product_retailer_id\\\&quot;: \\\&quot;...\\\&quot;}}     - button: sub_type url or quick_reply       - url: parameters {\\\&quot;text\\\&quot;: \\\&quot;Button\\\&quot;, \\\&quot;url\\\&quot;: \\\&quot;https://...\\\&quot;}       - quick_reply: parameters[] of {\\\&quot;id\\\&quot;: \\\&quot;...\\\&quot;, \\\&quot;text\\\&quot;: \\\&quot;...\\\&quot;}  | 
  **quotedMsgId** | **string** | Quoted message ID (Cloud API) | 
  **chatId** | **string** | Required if phone is not set. Chat ID from the message list. Examples: 12020721369@c.us or 120363046942338209@g.us(group) | 
  **phone** | **int32** | Required if chatId is not set. A phone number starting with the country code. USA example: 12020721369. | 
@@ -715,6 +740,8 @@ Name | Type | Description  | Notes
 > MessageSentResponse SendContact(ctx).Token(token).SendContactRequest(sendContactRequest).Execute()
 
 Send a Contact
+
+
 
 ### Example
 
@@ -757,6 +784,74 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **token** | **string** | JWT token or API key for authorization | 
  **sendContactRequest** | [**SendContactRequest**](SendContactRequest.md) |  | 
+
+### Return type
+
+[**MessageSentResponse**](MessageSentResponse.md)
+
+### Authorization
+
+[tokenAuth](../README.md#tokenAuth)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## SendContactInfo
+
+> MessageSentResponse SendContactInfo(ctx).Token(token).SendContactInfoRequest(sendContactInfoRequest).Execute()
+
+Request the user's phone number
+
+
+
+### Example
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"os"
+	openapiclient "github.com/GIT_USER_ID/GIT_REPO_ID"
+)
+
+func main() {
+	token := "token_example" // string | JWT token or API key for authorization
+	sendContactInfoRequest := *openapiclient.NewSendContactInfoRequest("Body_example") // SendContactInfoRequest |  (optional)
+
+	configuration := openapiclient.NewConfiguration()
+	apiClient := openapiclient.NewAPIClient(configuration)
+	resp, r, err := apiClient.MessagingAPI.SendContactInfo(context.Background()).Token(token).SendContactInfoRequest(sendContactInfoRequest).Execute()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error when calling `MessagingAPI.SendContactInfo``: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+	}
+	// response from `SendContactInfo`: MessageSentResponse
+	fmt.Fprintf(os.Stdout, "Response from `MessagingAPI.SendContactInfo`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiSendContactInfoRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **token** | **string** | JWT token or API key for authorization | 
+ **sendContactInfoRequest** | [**SendContactInfoRequest**](SendContactInfoRequest.md) |  | 
 
 ### Return type
 
@@ -1238,7 +1333,7 @@ Name | Type | Description  | Notes
 
 ## SendMessage
 
-> MessageSentResponse SendMessage(ctx).Token(token).Body(body).QuotedMsgId(quotedMsgId).ChatId(chatId).Phone(phone).Execute()
+> MessageSentResponse SendMessage(ctx).Token(token).Body(body).QuotedMsgId(quotedMsgId).ChatId(chatId).Phone(phone).Category(category).DirectSend(directSend).Execute()
 
 Send a Message
 
@@ -1260,12 +1355,14 @@ func main() {
 	token := "token_example" // string | JWT token or API key for authorization
 	body := "body_example" // string | Message text, UTF-8 or UTF-16 string with emoji
 	quotedMsgId := "quotedMsgId_example" // string | Message ID to quote/reply to (Cloud API wamid) (optional)
-	chatId := "chatId_example" // string | Chat ID in format: phone@c.us (individual) or phone@g.us (group) (optional)
+	chatId := "chatId_example" // string | Recipient chat ID: phone@c.us, group@g.us, or BSUID@lid (optional)
 	phone := int32(56) // int32 | Phone number starting with country code (alternative to chatId) (optional)
+	category := "category_example" // string | Optional Direct Send category. Direct Send is in beta: Meta has not enabled it on every business portfolio. `utility` or `authentication` enables it. `authentication` is part of that beta and is not recommended. Omit or `service` keeps a normal service message (and the marketing auto-template outside the 24-hour window). `marketing` is rejected.  (optional)
+	directSend := *openapiclient.NewSendMessageRequestDirectSend() // SendMessageRequestDirectSend |  (optional)
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.MessagingAPI.SendMessage(context.Background()).Token(token).Body(body).QuotedMsgId(quotedMsgId).ChatId(chatId).Phone(phone).Execute()
+	resp, r, err := apiClient.MessagingAPI.SendMessage(context.Background()).Token(token).Body(body).QuotedMsgId(quotedMsgId).ChatId(chatId).Phone(phone).Category(category).DirectSend(directSend).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `MessagingAPI.SendMessage``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -1289,8 +1386,10 @@ Name | Type | Description  | Notes
  **token** | **string** | JWT token or API key for authorization | 
  **body** | **string** | Message text, UTF-8 or UTF-16 string with emoji | 
  **quotedMsgId** | **string** | Message ID to quote/reply to (Cloud API wamid) | 
- **chatId** | **string** | Chat ID in format: phone@c.us (individual) or phone@g.us (group) | 
+ **chatId** | **string** | Recipient chat ID: phone@c.us, group@g.us, or BSUID@lid | 
  **phone** | **int32** | Phone number starting with country code (alternative to chatId) | 
+ **category** | **string** | Optional Direct Send category. Direct Send is in beta: Meta has not enabled it on every business portfolio. &#x60;utility&#x60; or &#x60;authentication&#x60; enables it. &#x60;authentication&#x60; is part of that beta and is not recommended. Omit or &#x60;service&#x60; keeps a normal service message (and the marketing auto-template outside the 24-hour window). &#x60;marketing&#x60; is rejected.  | 
+ **directSend** | [**SendMessageRequestDirectSend**](SendMessageRequestDirectSend.md) |  | 
 
 ### Return type
 
@@ -1448,9 +1547,11 @@ Name | Type | Description  | Notes
 
 ## SendProduct
 
-> MessageSentResponse SendProduct(ctx).Token(token).RequestBody(requestBody).Execute()
+> MessageSentResponse SendProduct(ctx).Token(token).SendProductRequest(sendProductRequest).Execute()
 
 Send a Product
+
+
 
 ### Example
 
@@ -1466,11 +1567,11 @@ import (
 
 func main() {
 	token := "token_example" // string | JWT token or API key for authorization
-	requestBody := map[string]interface{}{"key": interface{}(123)} // map[string]interface{} |  (optional)
+	sendProductRequest := *openapiclient.NewSendProductRequest(map[string]interface{}{"key": interface{}(123)}) // SendProductRequest | 
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.MessagingAPI.SendProduct(context.Background()).Token(token).RequestBody(requestBody).Execute()
+	resp, r, err := apiClient.MessagingAPI.SendProduct(context.Background()).Token(token).SendProductRequest(sendProductRequest).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `MessagingAPI.SendProduct``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -1492,7 +1593,7 @@ Other parameters are passed through a pointer to a apiSendProductRequest struct 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **token** | **string** | JWT token or API key for authorization | 
- **requestBody** | **map[string]interface{}** |  | 
+ **sendProductRequest** | [**SendProductRequest**](SendProductRequest.md) |  | 
 
 ### Return type
 

@@ -6,8 +6,10 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Body** | **string** | Message text, UTF-8 or UTF-16 string with emoji | 
 **QuotedMsgId** | Pointer to **string** | Message ID to quote/reply to (Cloud API wamid) | [optional] 
-**ChatId** | Pointer to **string** | Chat ID in format: phone@c.us (individual) or phone@g.us (group) | [optional] 
+**ChatId** | Pointer to **string** | Recipient chat ID: phone@c.us, group@g.us, or BSUID@lid | [optional] 
 **Phone** | Pointer to **int32** | Phone number starting with country code (alternative to chatId) | [optional] 
+**Category** | Pointer to **string** | Optional Direct Send category. Direct Send is in beta: Meta has not enabled it on every business portfolio. &#x60;utility&#x60; or &#x60;authentication&#x60; enables it. &#x60;authentication&#x60; is part of that beta and is not recommended. Omit or &#x60;service&#x60; keeps a normal service message (and the marketing auto-template outside the 24-hour window). &#x60;marketing&#x60; is rejected.  | [optional] 
+**DirectSend** | Pointer to [**SendMessageRequestDirectSend**](SendMessageRequestDirectSend.md) |  | [optional] 
 
 ## Methods
 
@@ -122,6 +124,56 @@ SetPhone sets Phone field to given value.
 `func (o *SendMessageRequest) HasPhone() bool`
 
 HasPhone returns a boolean if a field has been set.
+
+### GetCategory
+
+`func (o *SendMessageRequest) GetCategory() string`
+
+GetCategory returns the Category field if non-nil, zero value otherwise.
+
+### GetCategoryOk
+
+`func (o *SendMessageRequest) GetCategoryOk() (*string, bool)`
+
+GetCategoryOk returns a tuple with the Category field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetCategory
+
+`func (o *SendMessageRequest) SetCategory(v string)`
+
+SetCategory sets Category field to given value.
+
+### HasCategory
+
+`func (o *SendMessageRequest) HasCategory() bool`
+
+HasCategory returns a boolean if a field has been set.
+
+### GetDirectSend
+
+`func (o *SendMessageRequest) GetDirectSend() SendMessageRequestDirectSend`
+
+GetDirectSend returns the DirectSend field if non-nil, zero value otherwise.
+
+### GetDirectSendOk
+
+`func (o *SendMessageRequest) GetDirectSendOk() (*SendMessageRequestDirectSend, bool)`
+
+GetDirectSendOk returns a tuple with the DirectSend field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetDirectSend
+
+`func (o *SendMessageRequest) SetDirectSend(v SendMessageRequestDirectSend)`
+
+SetDirectSend sets DirectSend field to given value.
+
+### HasDirectSend
+
+`func (o *SendMessageRequest) HasDirectSend() bool`
+
+HasDirectSend returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

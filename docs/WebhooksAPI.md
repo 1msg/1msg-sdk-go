@@ -77,7 +77,7 @@ Name | Type | Description  | Notes
 
 ## SetWebhook
 
-> map[string]interface{} SetWebhook(ctx).Token(token).GetWebhook200Response(getWebhook200Response).Execute()
+> SetWebhook200Response SetWebhook(ctx).Token(token).SetWebhookRequest(setWebhookRequest).Execute()
 
 Set webhook URL
 
@@ -97,16 +97,16 @@ import (
 
 func main() {
 	token := "token_example" // string | JWT token or API key for authorization
-	getWebhook200Response := *openapiclient.NewGetWebhook200Response() // GetWebhook200Response |  (optional)
+	setWebhookRequest := *openapiclient.NewSetWebhookRequest(openapiclient.setWebhook_request_webhookUrl{ArrayOfString: new([]string)}) // SetWebhookRequest | 
 
 	configuration := openapiclient.NewConfiguration()
 	apiClient := openapiclient.NewAPIClient(configuration)
-	resp, r, err := apiClient.WebhooksAPI.SetWebhook(context.Background()).Token(token).GetWebhook200Response(getWebhook200Response).Execute()
+	resp, r, err := apiClient.WebhooksAPI.SetWebhook(context.Background()).Token(token).SetWebhookRequest(setWebhookRequest).Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error when calling `WebhooksAPI.SetWebhook``: %v\n", err)
 		fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
 	}
-	// response from `SetWebhook`: map[string]interface{}
+	// response from `SetWebhook`: SetWebhook200Response
 	fmt.Fprintf(os.Stdout, "Response from `WebhooksAPI.SetWebhook`: %v\n", resp)
 }
 ```
@@ -123,11 +123,11 @@ Other parameters are passed through a pointer to a apiSetWebhookRequest struct v
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **token** | **string** | JWT token or API key for authorization | 
- **getWebhook200Response** | [**GetWebhook200Response**](GetWebhook200Response.md) |  | 
+ **setWebhookRequest** | [**SetWebhookRequest**](SetWebhookRequest.md) |  | 
 
 ### Return type
 
-**map[string]interface{}**
+[**SetWebhook200Response**](SetWebhook200Response.md)
 
 ### Authorization
 

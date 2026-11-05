@@ -4,7 +4,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**Policy** | Pointer to **string** |  | [optional] 
+**Policy** | Pointer to **string** | Must be &#x60;deterministic&#x60; | [optional] [default to "deterministic"]
 **Code** | Pointer to **string** |  | [optional] 
 
 ## Methods

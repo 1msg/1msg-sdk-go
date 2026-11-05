@@ -3,7 +3,7 @@
 
 Public client API for sending messages, managing groups, flows, and templates.  This is the API exposed to end customers via platform.1msg.io  **Authentication:** Pass the channel token in **one** place. The API checks JSON body (`token`), then query string (`?token=`), then `Authorization: Bearer` header (preferred in production).  **Documentation:** https://help.1msg.io/platform-1msg/getting-start/quick-start **API Docs:** https://docs.1msg.io/ 
 
-API version: 1.0.0
+API version: 2.0.0
 Contact: support@1msg.io
 */
 
@@ -30,6 +30,9 @@ type SendMessageRequest struct {
 	ChatId *string `json:"chatId,omitempty"`
 	// Phone number starting with country code (alternative to chatId)
 	Phone *int32 `json:"phone,omitempty"`
+	// Optional Direct Send category. Direct Send is in beta: Meta has not enabled it on every business portfolio. `utility` or `authentication` enables it. `authentication` is part of that beta and is not recommended. Omit or `service` keeps a normal service message (and the marketing auto-template outside the 24-hour window). `marketing` is rejected. 
+	Category *string `json:"category,omitempty"`
+	DirectSend *SendMessageRequestDirectSend `json:"directSend,omitempty"`
 }
 
 type _SendMessageRequest SendMessageRequest
@@ -172,6 +175,70 @@ func (o *SendMessageRequest) SetPhone(v int32) {
 	o.Phone = &v
 }
 
+// GetCategory returns the Category field value if set, zero value otherwise.
+func (o *SendMessageRequest) GetCategory() string {
+	if o == nil || IsNil(o.Category) {
+		var ret string
+		return ret
+	}
+	return *o.Category
+}
+
+// GetCategoryOk returns a tuple with the Category field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *SendMessageRequest) GetCategoryOk() (*string, bool) {
+	if o == nil || IsNil(o.Category) {
+		return nil, false
+	}
+	return o.Category, true
+}
+
+// HasCategory returns a boolean if a field has been set.
+func (o *SendMessageRequest) HasCategory() bool {
+	if o != nil && !IsNil(o.Category) {
+		return true
+	}
+
+	return false
+}
+
+// SetCategory gets a reference to the given string and assigns it to the Category field.
+func (o *SendMessageRequest) SetCategory(v string) {
+	o.Category = &v
+}
+
+// GetDirectSend returns the DirectSend field value if set, zero value otherwise.
+func (o *SendMessageRequest) GetDirectSend() SendMessageRequestDirectSend {
+	if o == nil || IsNil(o.DirectSend) {
+		var ret SendMessageRequestDirectSend
+		return ret
+	}
+	return *o.DirectSend
+}
+
+// GetDirectSendOk returns a tuple with the DirectSend field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *SendMessageRequest) GetDirectSendOk() (*SendMessageRequestDirectSend, bool) {
+	if o == nil || IsNil(o.DirectSend) {
+		return nil, false
+	}
+	return o.DirectSend, true
+}
+
+// HasDirectSend returns a boolean if a field has been set.
+func (o *SendMessageRequest) HasDirectSend() bool {
+	if o != nil && !IsNil(o.DirectSend) {
+		return true
+	}
+
+	return false
+}
+
+// SetDirectSend gets a reference to the given SendMessageRequestDirectSend and assigns it to the DirectSend field.
+func (o *SendMessageRequest) SetDirectSend(v SendMessageRequestDirectSend) {
+	o.DirectSend = &v
+}
+
 func (o SendMessageRequest) MarshalJSON() ([]byte, error) {
 	toSerialize,err := o.ToMap()
 	if err != nil {
@@ -191,6 +258,12 @@ func (o SendMessageRequest) ToMap() (map[string]interface{}, error) {
 	}
 	if !IsNil(o.Phone) {
 		toSerialize["phone"] = o.Phone
+	}
+	if !IsNil(o.Category) {
+		toSerialize["category"] = o.Category
+	}
+	if !IsNil(o.DirectSend) {
+		toSerialize["directSend"] = o.DirectSend
 	}
 	return toSerialize, nil
 }

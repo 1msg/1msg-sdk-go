@@ -4,7 +4,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**Phone** | Pointer to **string** |  | [optional] 
+**Phone** | Pointer to **string** | E.164 phone (&#x60;+79181976551&#x60;). Not a timestamp. | [optional] 
 **Type** | Pointer to **string** |  | [optional] 
 **WaId** | Pointer to **string** |  | [optional] 
 
